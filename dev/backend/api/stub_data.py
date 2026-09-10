@@ -1,14 +1,12 @@
-"""Hardcoded Phase 1 data.
+"""Fallback fixture for GET /api/market-insights.
 
-This lets the frontend integrate against real HTTP before the database and
-skill-matching logic exist. Phase 2 replaces these with `services/` +
-`repositories/` backed by PostgreSQL — the response shapes stay identical.
+Served verbatim when the job dataset is empty or unreachable (see
+api/services/market_insights.py). Values mirror the frontend demo fixture
+(frontend/src/data/mockInsights.js) so a cold backend produces the same screen
+as the frontend's offline mock mode.
 
-Values mirror the frontend demo fixtures (frontend/src/data/*.js) so switching
-from mock mode to the live backend produces the same screens.
+The role map that used to live here moved to api/data/role_skill_map.py.
 """
-
-# --- GET /api/market-insights -------------------------------------------------
 
 MARKET_INSIGHTS = {
     "updatedAt": "2026-09-01",
@@ -40,26 +38,3 @@ MARKET_INSIGHTS = {
         {"label": "Entry-level openings", "percentage": 6, "direction": "down"},
     ],
 }
-
-
-# --- POST /api/analyze  &  GET /api/roles ------------------------------------
-
-# role label -> canonical required skills. Phase 2 derives/enriches this from the
-# job-market dataset; keep the curated map as the reliable baseline.
-ROLE_REQUIRED_SKILLS: dict[str, list[str]] = {
-    "Data Analyst": ["SQL", "Excel", "Python", "Tableau", "Statistics"],
-    "Data Engineer": ["Python", "SQL", "Spark", "Airflow", "AWS", "Docker"],
-    "Business Analyst": ["SQL", "Excel", "Power BI", "Stakeholder Management", "Statistics"],
-    "Software Engineer": ["JavaScript", "React", "Node.js", "SQL", "Git", "REST API"],
-    "Product Manager": ["Roadmapping", "SQL", "Stakeholder Management", "Agile", "Analytics"],
-}
-
-
-def _slug(label: str) -> str:
-    return label.lower().replace(" ", "-")
-
-
-ROLES = [
-    {"id": _slug(label), "label": label, "requiredSkills": skills}
-    for label, skills in ROLE_REQUIRED_SKILLS.items()
-]

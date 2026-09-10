@@ -285,15 +285,16 @@ To unblock backend development, the backend needs:
 
 1. **`backend/db/init.sql` populated** with real `CREATE TABLE` statements +
    seed data, so the API can be developed and demoed locally.
-2. **Confirmed table + column names** for:
-   - Job market: `job_title`, `company`, `job_location`, `job_level`,
-     `job_type`, `job_skills` — and the **format of `job_skills`** (delimiter?
-     JSON array? one row per skill?).
+2. **Confirmed table + column names:**
+   - ✅ Job market: `jobs(job_id, job_title, company, job_location, job_level,
+     job_type)` + `job_skill(job_id, skill)` — one row per (job, skill).
+     Backend codes against this now.
    - Candidates: `applicants(applicant_id, devtype, degree_clean, yearscodepro,
-     country)`, `applicant_skill(applicant_id, skill)`.
-3. **A decision on `job_title` → role mapping.** The 5 UI roles must map to messy
-   free-text titles in the dataset. Either Data Eng adds a cleaned `role` column,
-   or Backend maintains the mapping in `role_skill_map.py`.
+     country)`, `applicant_skill(applicant_id, skill)` — **only if in scope
+     (see item 5).**
+3. **A decision on `job_title` → role mapping.** Backend currently owns it
+   (`role_skill_map.classify_title`, regex over free-text titles). A cleaned
+   `role` column from Data Eng would be more reliable — optional.
 4. **(Nice to have)** SQL aggregation views for the market-insights numbers
    (top skills / roles / locations by % of postings).
 5. **A decision on the candidate dataset.** It is not used by any current screen.
@@ -328,12 +329,36 @@ VITE_MARKET_INSIGHTS_URL=http://localhost:8000/api/market-insights
 VITE_N8N_WEBHOOK_URL=http://localhost:8000/api/analyze
 ```
 
-### Phase 2 — Data + real logic
-- [ ] Align with Data Eng on §5.
-- [ ] `jobs_repo` + `market_insights` service → real `GET /api/market-insights`.
-- [ ] `skill_matching` service (§4.3) + `roadmap` builder → real `POST /api/analyze`
-      **without AI** (deterministic). Frontend now works end-to-end on real data.
-- [ ] `GET /api/roles`.
+### Phase 2 — Data + real logic — 🔨 IN PROGRESS
+
+Data Eng confirmed the cleaned schema:
+```
+jobs(job_id, job_title, company, job_location, job_level, job_type)
+job_skill(job_id, skill)          -- one row per (job, skill)
+```
+
+- [x] `api/repositories/jobs_repo.py` — raw SQL over `jobs` / `job_skill`
+      (`managed = False`, no models). Every query is savepoint-wrapped and
+      degrades to `[]` if the tables are absent (test DB).
+- [x] `api/services/skills.py` — normalise + alias map (`js→javascript`,
+      `postgres/mysql/…→sql`, `py→python`, …) + display-form lookup. Unit-tested.
+- [x] `api/services/skill_matching.py` — `diff(required, current)` → strengths /
+      missing / matchScore, alias-aware. `api/services/roadmap.py`,
+      `api/services/recommendation.py` (the Phase 3 AI fallback).
+- [x] `api/services/market_insights.py` — aggregates topSkills / topRoles
+      (free-text titles bucketed via `role_skill_map.classify_title`) /
+      topLocations, 1h in-process cache, **falls back to `stub_data` when the
+      dataset is empty/unreachable** so the endpoint never 500s.
+- [x] `api/data/role_skill_map.py` — curated map + title classifier +
+      `role_catalogue()`. Optional data enrichment behind `ENRICH_FROM_DATA`
+      (off by default). `GET /api/roles` served from here.
+- [x] `POST /api/analyze` now deterministic on the real matcher; input capped
+      (50 skills / 60 chars, control chars stripped) ahead of the Phase 3 prompt.
+- [x] `api/tests.py`: 14 tests (contract + normalise/diff/roadmap/classify units).
+- [ ] Point `DATABASE_URL` at the populated Supabase DB and eyeball
+      `GET /api/market-insights` against real rows (tune the title/alias maps).
+- [ ] Decide `trends` (currently returns `[]` from real data — no time dimension).
+- [ ] Optional: SQL aggregation view from Data Eng instead of app-side grouping.
 
 ### Phase 3 — AI + production
 - [ ] `openai_client.py`: JSON-mode structured output, gap context in the prompt,
