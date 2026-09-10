@@ -1,0 +1,11 @@
+# Pinned to the versions currently installed in .venv.
+# Regenerate after changes with:  pip freeze > requirements.txt
+Django==6.1.1
+django-ninja==1.7.0
+django-cors-headers==4.9.0
+psycopg2-binary==2.9.12
+dj-database-url==3.1.2
+python-dotenv==1.2.3
+
+# AI — used from Phase 3 onward (api/ai/openai_client.py). Not yet imported.
+openai==1.109.1

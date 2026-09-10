@@ -10,22 +10,35 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
+import os
 from pathlib import Path
+
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load backend/.env (gitignored). See backend/.env.example for the full list.
+load_dotenv(BASE_DIR / '.env')
+
+
+def _csv_env(name, default):
+    return [item.strip() for item in os.environ.get(name, default).split(',') if item.strip()]
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-obi^6wdcl3zfn=$9ge)@*1oob@9kf*!lslxqeu9_!!7ow8^3+)'
+SECRET_KEY = os.environ.get(
+    'DJANGO_SECRET_KEY',
+    'django-insecure-obi^6wdcl3zfn=$9ge)@*1oob@9kf*!lslxqeu9_!!7ow8^3+)',
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DJANGO_DEBUG', 'true').lower() == 'true'
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = _csv_env('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1')
 
 
 # Application definition
@@ -38,6 +51,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'corsheaders',
+    'api',
 ]
 
 MIDDLEWARE = [
@@ -51,8 +65,12 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-# Allow React (running on localhost:5173) to fetch data from Django
-CORS_ALLOW_ALL_ORIGINS = True
+# Allow the React dev server (and the deployed frontend) to call this API.
+# Override in production via the CORS_ALLOWED_ORIGINS env var.
+CORS_ALLOWED_ORIGINS = _csv_env(
+    'CORS_ALLOWED_ORIGINS',
+    'http://localhost:5173,http://127.0.0.1:5173',
+)
 
 ROOT_URLCONF = 'core.urls'
 
@@ -78,19 +96,21 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # Database - Supabase connection
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-import os
+import sys
+
 import dj_database_url
-from dotenv import load_dotenv
 
-load_dotenv()
-
-DATABASES = {
-    'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL'),
-        conn_max_age=600,
-        conn_health_checks=True,
-    )
-}
+if 'test' in sys.argv:
+    # Tests run against a local throwaway SQLite DB — no Supabase round-trip.
+    DATABASES = {'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': ':memory:'}}
+else:
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=os.environ.get('DATABASE_URL'),
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
+    }
 
 
 # Password validation
