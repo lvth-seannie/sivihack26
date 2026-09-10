@@ -3,7 +3,7 @@
 Field names are camelCase on purpose: they are the API boundary and must match
 the frontend contract in docs/BACKEND_SPEC.md §3 exactly.
 """
-from typing import Literal, Optional
+from typing import Optional
 
 from ninja import Schema
 
@@ -13,10 +13,13 @@ class NamedPercentage(Schema):
     percentage: int
 
 
-class Trend(Schema):
+class SnapshotStat(Schema):
+    """A point-in-time share of postings (NOT a time series — the dataset is a
+    single snapshot). e.g. {"label": "Remote-friendly roles", "percentage": 31}.
+    """
     label: str
     percentage: int
-    direction: Literal["up", "down"]
+    caption: Optional[str] = None
 
 
 class MarketInsightsOut(Schema):
@@ -24,7 +27,7 @@ class MarketInsightsOut(Schema):
     topSkills: list[NamedPercentage]
     topRoles: list[NamedPercentage]
     topLocations: list[NamedPercentage]
-    trends: list[Trend]
+    trends: list[SnapshotStat]
 
 
 class RoleOut(Schema):

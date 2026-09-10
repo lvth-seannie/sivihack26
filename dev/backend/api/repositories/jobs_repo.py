@@ -67,6 +67,41 @@ def location_counts() -> list[tuple[str, int]]:
     )
 
 
+def level_counts() -> list[tuple[str, int]]:
+    """(job_level lowered/trimmed, number of postings)."""
+    return _rows(
+        """
+        SELECT LOWER(TRIM(job_level)) AS lvl, COUNT(*) AS n
+        FROM jobs
+        WHERE job_level IS NOT NULL AND TRIM(job_level) <> ''
+        GROUP BY LOWER(TRIM(job_level))
+        """
+    )
+
+
+def remote_job_count() -> int:
+    """Postings whose job_type or job_location mentions 'remote'."""
+    rows = _rows(
+        """
+        SELECT COUNT(*) FROM jobs
+        WHERE LOWER(COALESCE(job_type, '') || ' ' || COALESCE(job_location, '')) LIKE '%remote%'
+        """
+    )
+    return int(rows[0][0]) if rows else 0
+
+
+def job_skill_pairs() -> list[tuple[str, str]]:
+    """(job_id, skill lowered/trimmed) — one row per (job, skill). Used for
+    set-membership stats where GROUP BY in SQL would over- or under-count."""
+    return _rows(
+        """
+        SELECT job_id, LOWER(TRIM(skill)) AS skill
+        FROM job_skill
+        WHERE skill IS NOT NULL AND TRIM(skill) <> ''
+        """
+    )
+
+
 def skill_counts_for_titles(titles: list[str]) -> list[tuple[str, int]]:
     """(skill, distinct jobs) restricted to postings whose title is in `titles`."""
     if not titles:

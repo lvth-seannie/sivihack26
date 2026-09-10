@@ -102,8 +102,9 @@ Powers the **Market Insights** page. Called once on app load.
     // ~5 items
   ],
   "trends": [
-    { "label": "AI / ML tooling demand", "percentage": 62, "direction": "up" }
-    // direction: "up" | "down"
+    { "label": "Remote-friendly roles", "percentage": 31, "caption": "1,240 of 4,010 postings" },
+    { "label": "Senior-level openings", "percentage": 44, "caption": null }
+    // point-in-time shares of postings — NOT a time series; no "direction"
   ]
 }
 ```
@@ -111,9 +112,12 @@ Powers the **Market Insights** page. Called once on app load.
 Notes:
 - `name` and `percentage` keys are read directly by the UI — do not rename.
 - `percentage` is an integer 0–100 (share of job postings that mention the item).
-- `trends` has **no data source yet** (the dataset is a single snapshot with no
-  time dimension). Options: (a) drop the card, (b) mark it illustrative, (c) get a
-  second snapshot from Data Eng. Decide before the demo.
+- `trends`: the dataset is a single snapshot, so there is no up/down trend. The
+  backend instead returns point-in-time shares computed from the snapshot —
+  remote-friendly %, seniority mix (from `job_level`), and AI/ML & cloud skill
+  demand (from `job_skill`). Each item is `{ label, percentage, caption? }`
+  (`caption` is an optional "N of M postings" string). A stat is omitted when
+  its source column has no data. The UI renders these as meter rows (option C).
 - This response should be **cached** (see §4.4).
 
 ### 3.2 `POST /api/analyze`
@@ -355,9 +359,13 @@ job_skill(job_id, skill)          -- one row per (job, skill)
 - [x] `POST /api/analyze` now deterministic on the real matcher; input capped
       (50 skills / 60 chars, control chars stripped) ahead of the Phase 3 prompt.
 - [x] `api/tests.py`: 14 tests (contract + normalise/diff/roadmap/classify units).
+- [x] `trends` → **option C**: point-in-time shares from the snapshot
+      (remote %, seniority mix from `job_level`, AI/ML & cloud skill demand).
+      Item shape is now `{ label, percentage, caption? }` — no `direction`.
+      Frontend renders them as meter rows (`MarketInsights.jsx`, `mockInsights.js`).
 - [ ] Point `DATABASE_URL` at the populated Supabase DB and eyeball
-      `GET /api/market-insights` against real rows (tune the title/alias maps).
-- [ ] Decide `trends` (currently returns `[]` from real data — no time dimension).
+      `GET /api/market-insights` against real rows (tune the title/alias maps
+      and the `job_level` senior/junior regexes to the real values).
 - [ ] Optional: SQL aggregation view from Data Eng instead of app-side grouping.
 
 ### Phase 3 — AI + production

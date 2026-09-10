@@ -8,6 +8,8 @@ the stub fallback path here.
 from django.test import SimpleTestCase, TestCase
 
 from api.data.role_skill_map import classify_title
+from api.repositories import jobs_repo
+from api.services import market_insights
 from api.services.roadmap import build as build_roadmap
 from api.services.skill_matching import diff
 from api.services.skills import display, normalize
@@ -30,8 +32,8 @@ class MarketInsightsTests(TestCase):
             {"updatedAt", "topSkills", "topRoles", "topLocations", "trends"},
         )
         self.assertEqual(set(body["topSkills"][0]), {"name", "percentage"})
-        for trend in body["trends"]:
-            self.assertEqual(set(trend), {"label", "percentage", "direction"})
+        for stat in body["trends"]:
+            self.assertEqual(set(stat), {"label", "percentage", "caption"})
 
 
 class RolesTests(TestCase):
@@ -110,6 +112,51 @@ class RoadmapTests(SimpleTestCase):
         self.assertEqual([s["phase"] for s in steps], ["Phase 1", "Phase 2", "Phase 3"])
         self.assertEqual([s["skill"] for s in steps], ["Python", "Spark", "Airflow"])
         self.assertTrue(all(s["description"] for s in steps))
+
+
+class MarketSnapshotTests(SimpleTestCase):
+    """`trends` is computed from the single snapshot: level mix, remote share,
+    AI/ML and cloud skill mentions."""
+
+    def setUp(self):
+        self._orig = {
+            name: getattr(jobs_repo, name)
+            for name in ("total_jobs", "skill_counts", "title_counts",
+                         "location_counts", "level_counts", "remote_job_count",
+                         "job_skill_pairs")
+        }
+        market_insights.clear_cache()
+        self.addCleanup(self._restore)
+
+    def _restore(self):
+        for name, fn in self._orig.items():
+            setattr(jobs_repo, name, fn)
+        market_insights.clear_cache()
+
+    def test_snapshot_from_fake_dataset(self):
+        jobs_repo.total_jobs = lambda: 100
+        jobs_repo.skill_counts = lambda: [("python", 40), ("aws", 30)]
+        jobs_repo.title_counts = lambda: [("Senior Data Engineer", 60), ("Data Analyst", 40)]
+        jobs_repo.location_counts = lambda: [("Berlin, Germany", 100)]
+        jobs_repo.level_counts = lambda: [("senior", 55), ("junior", 20), ("mid-level", 25)]
+        jobs_repo.remote_job_count = lambda: 18
+        jobs_repo.job_skill_pairs = lambda: (
+            [("j%d" % i, "pytorch") for i in range(23)]
+            + [("j%d" % i, "aws") for i in range(29)]
+        )
+
+        stats = {s["label"]: s["percentage"] for s in market_insights.get_insights(force=True)["trends"]}
+        self.assertEqual(stats["Remote-friendly roles"], 18)
+        self.assertEqual(stats["Senior-level openings"], 55)
+        self.assertEqual(stats["Junior / entry-level openings"], 20)
+        self.assertEqual(stats["Roles requiring AI / ML skills"], 23)
+        self.assertEqual(stats["Roles requiring cloud skills (AWS / Azure / GCP)"], 29)
+
+    def test_falls_back_to_stub_when_empty(self):
+        jobs_repo.total_jobs = lambda: 0
+        body = market_insights.get_insights(force=True)
+        self.assertTrue(body["trends"])
+        self.assertEqual(set(body["trends"][0]), {"label", "percentage", "caption"})
 
 
 class TitleClassifyTests(SimpleTestCase):

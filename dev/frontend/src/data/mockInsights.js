@@ -24,10 +24,13 @@ export const mockMarketInsights = {
     { name: 'Remote (EU)', percentage: 19 },
     { name: 'Hamburg', percentage: 12 },
   ],
+  // Point-in-time shares of postings (not a time series) — matches the backend
+  // `trends` block computed from job_level / job_type / skill mentions.
   trends: [
-    { label: 'AI / ML tooling demand', percentage: 62, direction: 'up' },
-    { label: 'Cloud infrastructure roles', percentage: 47, direction: 'up' },
-    { label: 'Average salary (YoY)', percentage: 8, direction: 'up' },
-    { label: 'Entry-level openings', percentage: 6, direction: 'down' },
+    { label: 'Remote-friendly roles', percentage: 31, caption: 'demo data' },
+    { label: 'Senior-level openings', percentage: 44, caption: 'demo data' },
+    { label: 'Junior / entry-level openings', percentage: 12, caption: 'demo data' },
+    { label: 'Roles requiring AI / ML skills', percentage: 23, caption: 'demo data' },
+    { label: 'Roles requiring cloud skills (AWS / Azure / GCP)', percentage: 29, caption: 'demo data' },
   ],
 }

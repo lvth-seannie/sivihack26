@@ -1,6 +1,4 @@
-import { TrendUpIcon, TrendDownIcon } from '../components/icons'
-
-function MeterRow({ name, percentage }) {
+function MeterRow({ name, percentage, caption }) {
   return (
     <div className="meter-row">
       <div className="meter-row-head">
@@ -10,6 +8,7 @@ function MeterRow({ name, percentage }) {
       <div className="meter-track">
         <div className="meter-fill" style={{ width: `${Math.min(100, percentage)}%` }} />
       </div>
+      {caption && <span className="meter-caption">{caption}</span>}
     </div>
   )
 }
@@ -69,15 +68,14 @@ function MarketInsights({ data, status, errorMessage, isDemo }) {
         <MeterCard title="Top Hiring Locations" items={data.topLocations} />
 
         <div className="card">
-          <label className="label">Market Trends</label>
-          {data.trends.map((trend) => (
-            <div className="trend-row" key={trend.label}>
-              <span>{trend.label}</span>
-              <span className={`trend-value ${trend.direction === 'up' ? 'is-up' : 'is-down'}`}>
-                {trend.direction === 'up' ? <TrendUpIcon /> : <TrendDownIcon />}
-                {trend.percentage}%
-              </span>
-            </div>
+          <label className="label">Market Snapshot</label>
+          {data.trends.map((stat) => (
+            <MeterRow
+              key={stat.label}
+              name={stat.label}
+              percentage={stat.percentage}
+              caption={stat.caption}
+            />
           ))}
         </div>
       </div>
