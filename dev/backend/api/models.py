@@ -5,6 +5,10 @@ from django.db import models
 # api/repositories/jobs_repo.py — intentionally NO models here, so `makemigrations`
 # never tries to create or alter them.
 #
-# Reference schema:
-#   jobs(job_id, job_title, company, job_location, job_level, job_type)
-#   job_skill(job_id, skill)
+# Agreed schema (backend/database/schema.sql):
+#   companies(id, name)
+#   skills(id, skill_name)
+#   jobs(id, company_id, title, location, job_level, job_type)
+#   job_skills_mapping(job_id, skill_id)        -- PK(job_id, skill_id)
+#   candidates(id, dev_type, degree, years_code_pro, country)
+#   candidate_skills_mapping(candidate_id, skill_id)

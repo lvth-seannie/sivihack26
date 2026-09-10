@@ -287,23 +287,36 @@ Unit-test this module hard — it is the product.
 
 To unblock backend development, the backend needs:
 
-1. **`backend/db/init.sql` populated** with real `CREATE TABLE` statements +
-   seed data, so the API can be developed and demoed locally.
-2. **Confirmed table + column names:**
-   - ✅ Job market: `jobs(job_id, job_title, company, job_location, job_level,
-     job_type)` + `job_skill(job_id, skill)` — one row per (job, skill).
-     Backend codes against this now.
-   - Candidates: `applicants(applicant_id, devtype, degree_clean, yearscodepro,
-     country)`, `applicant_skill(applicant_id, skill)` — **only if in scope
-     (see item 5).**
-3. **A decision on `job_title` → role mapping.** Backend currently owns it
+1. **Run the staging → normalised ETL.** `staging_jobs` (~108k rows) is
+   populated; the normalised tables (`jobs`, `skills`, `companies`,
+   `job_skills_mapping`) are still **empty**. Until the ETL runs,
+   `/api/market-insights` serves the stub fallback.
+2. **Agreed schema** (`backend/database/schema.sql`):
+   ```
+   companies(id, name)
+   skills(id, skill_name)
+   jobs(id, company_id, title, location, job_level, job_type)
+   job_skills_mapping(job_id, skill_id)              -- PK(job_id, skill_id)
+   candidates(id, dev_type, degree, years_code_pro, country)
+   candidate_skills_mapping(candidate_id, skill_id)
+   ```
+   ⚠️ The deployed `jobs` table currently has `job_title`, not `title` —
+   `jobs_repo._title_col()` resolves whichever exists, but Data Eng should make
+   the ETL output match `schema.sql`.
+   Backend codes against this now.
+3. **Data-quality watch (from `staging_jobs`):** `job_level` has only
+   "Mid senior" / "Associate"; `job_type` is ~99% "Onsite"; most `job_title`
+   values are non-tech; `job_skills` is verbose free text. The ETL's cleaning of
+   `skills` drives every Market Insights number and match score.
+4. **A decision on job title → role mapping.** Backend currently owns it
    (`role_skill_map.classify_title`, regex over free-text titles). A cleaned
    `role` column from Data Eng would be more reliable — optional.
-4. **(Nice to have)** SQL aggregation views for the market-insights numbers
+5. **(Nice to have)** SQL aggregation views for the market-insights numbers
    (top skills / roles / locations by % of postings).
-5. **A decision on the candidate dataset.** It is not used by any current screen.
-   If it's in scope, define the feature (e.g. "you're ahead of X% of applicants
-   for this role") so Backend can add an endpoint.
+6. **A decision on the candidate dataset** (`candidates` /
+   `candidate_skills_mapping`). Not used by any current screen. If in scope,
+   define the feature (e.g. "you're ahead of X% of applicants for this role")
+   so Backend can add an endpoint.
 
 ---
 
@@ -335,15 +348,19 @@ VITE_N8N_WEBHOOK_URL=http://localhost:8000/api/analyze
 
 ### Phase 2 — Data + real logic — 🔨 IN PROGRESS
 
-Data Eng confirmed the cleaned schema:
+Agreed normalised schema — `backend/database/schema.sql` (see §5):
 ```
-jobs(job_id, job_title, company, job_location, job_level, job_type)
-job_skill(job_id, skill)          -- one row per (job, skill)
+jobs(id, company_id, title, location, job_level, job_type)
+skills(id, skill_name)
+job_skills_mapping(job_id, skill_id)              -- PK(job_id, skill_id)
+companies(id, name)
 ```
 
-- [x] `api/repositories/jobs_repo.py` — raw SQL over `jobs` / `job_skill`
-      (`managed = False`, no models). Every query is savepoint-wrapped and
-      degrades to `[]` if the tables are absent (test DB).
+- [x] `api/repositories/jobs_repo.py` — raw SQL over the normalised tables
+      (JOIN `jobs` ↔ `job_skills_mapping` ↔ `skills`; no Django models). Every
+      query is savepoint-wrapped and degrades to `[]` if the tables are absent
+      or empty. `_title_col()` resolves `title` vs the currently-deployed
+      `job_title`.
 - [x] `api/services/skills.py` — normalise + alias map (`js→javascript`,
       `postgres/mysql/…→sql`, `py→python`, …) + display-form lookup. Unit-tested.
 - [x] `api/services/skill_matching.py` — `diff(required, current)` → strengths /
@@ -358,14 +375,19 @@ job_skill(job_id, skill)          -- one row per (job, skill)
       (off by default). `GET /api/roles` served from here.
 - [x] `POST /api/analyze` now deterministic on the real matcher; input capped
       (50 skills / 60 chars, control chars stripped) ahead of the Phase 3 prompt.
-- [x] `api/tests.py`: 14 tests (contract + normalise/diff/roadmap/classify units).
-- [x] `trends` → **option C**: point-in-time shares from the snapshot
-      (remote %, seniority mix from `job_level`, AI/ML & cloud skill demand).
-      Item shape is now `{ label, percentage, caption? }` — no `direction`.
-      Frontend renders them as meter rows (`MarketInsights.jsx`, `mockInsights.js`).
-- [ ] Point `DATABASE_URL` at the populated Supabase DB and eyeball
-      `GET /api/market-insights` against real rows (tune the title/alias maps
-      and the `job_level` senior/junior regexes to the real values).
+- [x] `api/tests.py`: 16 tests (contract + normalise/diff/roadmap/classify/
+      snapshot units).
+- [x] `trends` → **option C**: point-in-time shares from the snapshot —
+      remote-or-hybrid %, the dataset's own top-2 `job_level` buckets, and
+      AI/ML & cloud skill demand. Data-driven (no assumed vocabulary); a stat is
+      skipped when its column is empty. Item shape `{ label, percentage,
+      caption? }` — no `direction`. Frontend renders meter rows
+      (`MarketInsights.jsx` "Market Snapshot", `mockInsights.js`).
+- [x] Verified every `jobs_repo` query against the live Supabase schema (tables
+      exist, currently empty → stub fallback, no errors).
+- [ ] Re-check `GET /api/market-insights` once Data Eng's ETL populates the
+      tables; tune `skills.py` aliases and `role_skill_map` title regexes to the
+      real values.
 - [ ] Optional: SQL aggregation view from Data Eng instead of app-side grouping.
 
 ### Phase 3 — AI + production

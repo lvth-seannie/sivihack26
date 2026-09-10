@@ -30,11 +30,7 @@ _AI_ML_SKILLS = {
 }
 _CLOUD_SKILLS = {"aws", "google cloud", "azure", "kubernetes", "terraform"}
 
-_SENIOR_LEVEL = re.compile(r"senior|\bsr\b|lead|principal|staff|head|director|\bvp\b", re.I)
-_JUNIOR_LEVEL = re.compile(
-    r"junior|\bjr\b|entry|intern|working student|graduate|trainee|apprentice|associate|student",
-    re.I,
-)
+_FLEXIBLE_TYPE = re.compile(r"remote|hybrid", re.I)
 
 _cache: dict = {"at": 0.0, "payload": None}
 
@@ -62,20 +58,19 @@ def _rank(counts: dict[str, int], total: int, limit: int = _TOP_N) -> list[dict]
 
 
 def _snapshot(total: int) -> list[dict]:
-    """Point-in-time shares of all postings. A stat is only included when its
-    source column actually carries data, so we never show a misleading 0%."""
+    """Point-in-time shares of all postings, driven by whatever the dataset
+    actually carries (no assumed vocabulary). A stat is skipped when its source
+    column is empty, so we never render a misleading 0%."""
     stats: list[dict] = []
 
-    remote = jobs_repo.remote_job_count()
-    if remote:
-        stats.append(_stat("Remote-friendly roles", remote, total))
+    types = jobs_repo.type_counts()
+    if types:
+        flexible = sum(n for jt, n in types if _FLEXIBLE_TYPE.search(jt))
+        stats.append(_stat("Remote or hybrid roles", flexible, total))
 
-    levels = jobs_repo.level_counts()
-    if levels:
-        senior = sum(n for lvl, n in levels if _SENIOR_LEVEL.search(lvl))
-        junior = sum(n for lvl, n in levels if _JUNIOR_LEVEL.search(lvl))
-        stats.append(_stat("Senior-level openings", senior, total))
-        stats.append(_stat("Junior / entry-level openings", junior, total))
+    # seniority mix — render the dataset's own top two job_level buckets
+    for lvl, n in sorted(jobs_repo.level_counts(), key=lambda kv: -kv[1])[:2]:
+        stats.append(_stat(f"{lvl.title()} roles", n, total))
 
     pairs = jobs_repo.job_skill_pairs()
     if pairs:
@@ -88,7 +83,7 @@ def _snapshot(total: int) -> list[dict]:
             if key in _CLOUD_SKILLS:
                 cloud_jobs.add(job_id)
         stats.append(_stat("Roles requiring AI / ML skills", len(ai_jobs), total))
-        stats.append(_stat("Roles requiring cloud skills (AWS / Azure / GCP)", len(cloud_jobs), total))
+        stats.append(_stat("Roles requiring cloud skills", len(cloud_jobs), total))
 
     return stats
 

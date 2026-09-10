@@ -35,10 +35,10 @@ MARKET_INSIGHTS = {
     # computed from job_level / job_type / skill mentions; these are the
     # fallback shown only when the dataset is unreachable.
     "trends": [
-        {"label": "Remote-friendly roles", "percentage": 31, "caption": "demo data"},
-        {"label": "Senior-level openings", "percentage": 44, "caption": "demo data"},
-        {"label": "Junior / entry-level openings", "percentage": 12, "caption": "demo data"},
+        {"label": "Remote or hybrid roles", "percentage": 8, "caption": "demo data"},
+        {"label": "Mid Senior roles", "percentage": 55, "caption": "demo data"},
+        {"label": "Associate roles", "percentage": 30, "caption": "demo data"},
         {"label": "Roles requiring AI / ML skills", "percentage": 23, "caption": "demo data"},
-        {"label": "Roles requiring cloud skills (AWS / Azure / GCP)", "percentage": 29, "caption": "demo data"},
+        {"label": "Roles requiring cloud skills", "percentage": 29, "caption": "demo data"},
     ],
 }
