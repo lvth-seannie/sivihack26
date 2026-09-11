@@ -97,7 +97,6 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 import sys
-
 import dj_database_url
 
 if 'test' in sys.argv:
