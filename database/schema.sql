@@ -3,7 +3,6 @@
 -- Architecture: 2 Staging Tables + 6 Production Tables (3NF/1NF)
 -- ========================================================
 
--- Enable extensions if needed
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- --------------------------------------------------------
@@ -34,19 +33,16 @@ CREATE TABLE staging_candidates (
 -- --------------------------------------------------------
 -- 2. PRODUCTION CORE TABLES (Entities)
 -- --------------------------------------------------------
--- Companies Catalog
 CREATE TABLE IF NOT EXISTS companies (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL UNIQUE
 );
 
--- Skills Catalog (De-duplicated master list)
 CREATE TABLE IF NOT EXISTS skills (
     id SERIAL PRIMARY KEY,
     skill_name TEXT NOT NULL UNIQUE
 );
 
--- Candidates Master Table
 CREATE TABLE IF NOT EXISTS candidates (
     id INT PRIMARY KEY,
     dev_type TEXT NOT NULL,
@@ -55,7 +51,6 @@ CREATE TABLE IF NOT EXISTS candidates (
     country TEXT
 );
 
--- Jobs Master Table
 CREATE TABLE IF NOT EXISTS jobs (
     id INT PRIMARY KEY,
     company_id INT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
@@ -68,21 +63,18 @@ CREATE TABLE IF NOT EXISTS jobs (
 -- --------------------------------------------------------
 -- 3. JUNCTION / MAPPING TABLES (Normalized 1NF Relationships)
 -- --------------------------------------------------------
--- Candidate to Skills Mapping (Many-to-Many)
 CREATE TABLE IF NOT EXISTS candidate_skills_mapping (
     candidate_id INT NOT NULL REFERENCES candidates(id) ON DELETE CASCADE,
     skill_id INT NOT NULL REFERENCES skills(id) ON DELETE CASCADE,
     PRIMARY KEY (candidate_id, skill_id)
 );
 
--- Job to Required Skills Mapping (Many-to-Many)
 CREATE TABLE IF NOT EXISTS job_skills_mapping (
     job_id INT NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
     skill_id INT NOT NULL REFERENCES skills(id) ON DELETE CASCADE,
     PRIMARY KEY (job_id, skill_id)
 );
 
--- Indexes for Fast Query Optimization
 CREATE INDEX IF NOT EXISTS idx_jobs_company_id ON jobs(company_id);
 CREATE INDEX IF NOT EXISTS idx_candidate_skills_cand_id ON candidate_skills_mapping(candidate_id);
 CREATE INDEX IF NOT EXISTS idx_candidate_skills_skill_id ON candidate_skills_mapping(skill_id);
