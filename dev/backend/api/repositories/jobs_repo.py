@@ -1,11 +1,12 @@
 """Read-only access to the Data Engineering job-market tables.
 
-Agreed schema (see backend/database/schema.sql — owned by Data Eng, created
-outside Django):
+Agreed schema (see ../../../database/schema.sql +
+../../../database/data_dictionary.md — top-level database/ folder, sibling to
+backend/ and frontend/ — owned by Data Eng, created outside Django):
 
     companies(id, name)
     skills(id, skill_name)
-    jobs(id, company_id, title, location, job_level, job_type)
+    jobs(id, company_id, job_title, location, job_level, job_type)
     job_skills_mapping(job_id, skill_id)          -- PK(job_id, skill_id)
 
 Those tables are not managed by Django migrations, so everything here is raw

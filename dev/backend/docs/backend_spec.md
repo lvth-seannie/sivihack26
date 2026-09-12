@@ -291,18 +291,19 @@ To unblock backend development, the backend needs:
    populated; the normalised tables (`jobs`, `skills`, `companies`,
    `job_skills_mapping`) are still **empty**. Until the ETL runs,
    `/api/market-insights` serves the stub fallback.
-2. **Agreed schema** (`backend/database/schema.sql`):
+2. **Agreed schema** (`../../database/schema.sql` + `../../database/data_dictionary.md`,
+   top-level `database/` folder sibling to `backend/`/`frontend/` — supersedes
+   the old `backend/database/schema.sql`, deleted):
    ```
    companies(id, name)
    skills(id, skill_name)
-   jobs(id, company_id, title, location, job_level, job_type)
+   jobs(id, company_id, job_title, location, job_level, job_type)
    job_skills_mapping(job_id, skill_id)              -- PK(job_id, skill_id)
    candidates(id, dev_type, degree, years_code_pro, country)
    candidate_skills_mapping(candidate_id, skill_id)
    ```
-   ⚠️ The deployed `jobs` table currently has `job_title`, not `title` —
-   `jobs_repo._title_col()` resolves whichever exists, but Data Eng should make
-   the ETL output match `schema.sql`.
+   `jobs_repo._title_col()` still resolves `title` vs `job_title` defensively,
+   but `job_title` is now the settled, documented name.
    Backend codes against this now.
 3. **Data-quality watch (from `staging_jobs`):** `job_level` has only
    "Mid senior" / "Associate"; `job_type` is ~99% "Onsite"; most `job_title`
@@ -348,9 +349,9 @@ VITE_N8N_WEBHOOK_URL=http://localhost:8000/api/analyze
 
 ### Phase 2 — Data + real logic — 🔨 IN PROGRESS
 
-Agreed normalised schema — `backend/database/schema.sql` (see §5):
+Agreed normalised schema — `../../database/schema.sql` (see §5):
 ```
-jobs(id, company_id, title, location, job_level, job_type)
+jobs(id, company_id, job_title, location, job_level, job_type)
 skills(id, skill_name)
 job_skills_mapping(job_id, skill_id)              -- PK(job_id, skill_id)
 companies(id, name)
