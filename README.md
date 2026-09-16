@@ -4,17 +4,16 @@
 
 ## 1. The Final Stack
 
-| Layer | Choice | Cost | Role |
-|---|---|---|---|
-| Frontend | React (Vite) | Free | UI, hosted as static build |
-| Frontend hosting | Vercel | Free | Instant deploys, preview URLs per branch |
-| Backend framework | Django + Django Ninja | Free | REST API, async-friendly, auto Swagger docs |
-| Backend hosting | Render (Web Service, free tier) | Free | Runs the Django app |
-| Database | Neon Postgres | Free | Structured data — users, sessions, app data |
-| File / object storage | Cloudflare R2 | Free (10 GB) | Uploads, generated files, exports |
-| Uptime / keep-warm | UptimeRobot | Free | Pings `/api/health` every 5 min |
-| AI provider | Anthropic or OpenAI API (your keys) | Pay-as-you-go | Swappable behind one wrapper module |
-| Source control / CI | GitHub → auto-deploy to Render & Vercel | Free | Push to `main` = live in ~1–2 min |
+| Layer | Choice | Role |
+|---|---|---|
+| Frontend | React (Vite)  | UI, hosted as static build |
+| Frontend Hosting | Vercel | Instant deploys, preview URLs per branch |
+| Backend Framework | Django + Django Ninja | REST API, async-friendly, auto Swagger docs |
+| Backend Hosting | Render (Web Service) | Runs the Django app |
+| Database | Neon Postgres | Structured data — users, sessions, app data |
+| File / Object Storage | Cloudflare R2 | Uploads, generated files, exports |
+| Uptime / Keep-warm | UptimeRobot | Pings `/api/health` every 5 min |
+| AI Provider | Anthropic or OpenAI API (your keys) | Swappable behind one wrapper module |
 
 ```mermaid
 flowchart LR
