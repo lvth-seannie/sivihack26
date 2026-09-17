@@ -1,4 +1,5 @@
 from django.contrib.postgres.fields import ArrayField
+from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 
 
@@ -13,6 +14,17 @@ class Company(models.Model):
     capabilities_excluded = ArrayField(models.CharField(max_length=255), default=list, blank=True)
     available_from = models.DateField(null=True, blank=True)
 
+    # Descriptive profile fields (Appendix A) - not used by the rule engine,
+    # shown in the UI so an estimator/bid manager can sanity-check a verdict
+    # against who this company actually is.
+    founded_year = models.PositiveIntegerField(null=True, blank=True)
+    employee_count = models.PositiveIntegerField(null=True, blank=True)
+    revenue_eur = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    description = models.TextField(blank=True)
+    tagline = models.TextField(blank=True)
+    can_show = ArrayField(models.CharField(max_length=500), default=list, blank=True)
+    cannot_show = ArrayField(models.CharField(max_length=500), default=list, blank=True)
+
     class Meta:
         ordering = ["name"]
 
@@ -25,9 +37,6 @@ class Tender(models.Model):
     title = models.CharField(max_length=500)
     source_url = models.URLField(max_length=1000, blank=True)
     location = models.CharField(max_length=255, blank=True)
-    distance_from_augsburg_km = models.DecimalField(
-        max_digits=8, decimal_places=2, null=True, blank=True
-    )
     contract_value = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
     guarantee_required = models.DecimalField(
         max_digits=14, decimal_places=2, null=True, blank=True
@@ -74,8 +83,11 @@ class Verdict(models.Model):
         Lot, related_name="verdicts", null=True, blank=True, on_delete=models.CASCADE
     )
     verdict = models.CharField(max_length=20, choices=VerdictType.choices)
-    reason = models.CharField(max_length=500)
-    source_snippet = models.TextField(blank=True)
+    # Stable rule key (e.g. "OUT_OF_RADIUS") + the language-neutral facts
+    # behind it. The frontend renders both into a sentence in the viewer's
+    # chosen language - nothing language-specific is stored here.
+    reason_code = models.CharField(max_length=50, default="")
+    context = models.JSONField(default=dict, blank=True, encoder=DjangoJSONEncoder)
     source_page = models.PositiveIntegerField(null=True, blank=True)
     evaluated_at = models.DateTimeField(auto_now=True)
 
