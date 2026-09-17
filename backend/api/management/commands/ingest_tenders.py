@@ -40,11 +40,10 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 import requests
-from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
 
 from api.models import Tender
-from storage_client.client import delete_file, file_exists, upload_file
+from api.pdf_cache import cache_notice_pdf
 
 API_BASE = "https://oeffentlichevergabe.de"
 EXPORTS_URL = f"{API_BASE}/api/notice-exports"
@@ -185,17 +184,7 @@ class Command(BaseCommand):
         amount = value.get("amount")
         contract_value = Decimal(str(amount)) if amount is not None else None
 
-        pdf_resp = session.get(
-            f"{API_BASE}/api/notices/{notice_id}",
-            params={"format": "pdf"},
-            timeout=REQUEST_TIMEOUT,
-        )
-        pdf_resp.raise_for_status()
-
-        raw_document_key = f"tenders/{notice_id}.pdf"
-        if file_exists(raw_document_key):
-            delete_file(raw_document_key)
-        upload_file(ContentFile(pdf_resp.content), raw_document_key)
+        raw_document_key = cache_notice_pdf(session, notice_id)
 
         Tender.objects.update_or_create(
             external_id=str(notice_id),

@@ -39,7 +39,11 @@ export function LanguageProvider({ children }) {
       t: (key, params) => interpolate(dict.ui[key] ?? key, params),
       reasonText: (reasonCode, context) => {
         const fn = dict.reasons[reasonCode]
-        return fn ? fn(context ?? {}) : reasonCode
+        const base = fn ? fn(context ?? {}) : reasonCode
+        const citation = context?.citation
+        if (!citation?.snippet) return base
+        const key = citation.page != null ? 'citationWithPage' : 'citationNoPage'
+        return `${base} ${interpolate(dict.ui[key], citation)}`
       },
     }
   }, [locale])

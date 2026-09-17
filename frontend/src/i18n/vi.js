@@ -47,6 +47,8 @@ export default {
     profileRadius: 'Bán kính hoạt động',
     profileContractRange: 'Quy mô hợp đồng',
     profileGuaranteeCeiling: 'Hạn mức bảo lãnh',
+    profileWeeklyBidCapacity: 'Năng lực đấu thầu',
+    profileWeeklyBidCapacityValue: '{n} gói thầu / tuần',
     profileAvailableFrom: 'Sẵn sàng từ',
     profileCanShow: 'Kinh nghiệm đã chứng minh',
     profileCannotShow: 'Không thể đảm nhận',
@@ -54,6 +56,8 @@ export default {
     verdictCandidate: 'Ứng viên',
     verdictFlag: 'Cảnh báo',
     verdictHardFail: 'Loại trừ',
+    citationWithPage: '(xem tr. {page}: "{snippet}")',
+    citationNoPage: '(nguồn: "{snippet}")',
   },
   reasons: {
     OUT_OF_RADIUS: (ctx) =>
