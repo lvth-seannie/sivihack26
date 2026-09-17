@@ -13,7 +13,11 @@ export default function CompanyProfile({ company }) {
     { label: t('profileHq'), value: company.region_center },
     { label: t('profileRadius'), value: formatKm(company.region_radius_km, locale) },
     { label: t('profileContractRange'), value: `${formatCurrency(company.contract_min, locale)} – ${formatCurrency(company.contract_max, locale)}` },
-    { label: t('profileGuaranteeCeiling'), value: formatCurrency(company.guarantee_ceiling, locale) },
+    company.guarantee_ceiling != null && { label: t('profileGuaranteeCeiling'), value: formatCurrency(company.guarantee_ceiling, locale) },
+    company.weekly_bid_capacity != null && {
+      label: t('profileWeeklyBidCapacity'),
+      value: t('profileWeeklyBidCapacityValue', { n: company.weekly_bid_capacity }),
+    },
     company.available_from && { label: t('profileAvailableFrom'), value: formatDate(company.available_from, locale) },
   ].filter(Boolean)
 

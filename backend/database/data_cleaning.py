@@ -19,7 +19,7 @@ pd.set_option('display.width', None)
 
 BASE_DIR = Path(__file__).resolve().parent
 RAW_DIR = BASE_DIR / 'raw_data'
-CLEAN_DIR = RAW_DIR / 'cleaned'
+CLEAN_DIR = BASE_DIR / 'clean_data'
 
 # noticeIdentifier/noticeVersion/lotIdentifier phai doc voi dtype=str: neu de pandas
 # tu suy luan kieu, gia tri dang chuoi so nhu '01' se bi hieu nham thanh so 1 (mat so 0

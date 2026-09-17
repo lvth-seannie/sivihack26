@@ -47,6 +47,8 @@ export default {
     profileRadius: 'Einsatzradius',
     profileContractRange: 'Auftragsgröße',
     profileGuaranteeCeiling: 'Bürgschaftslimit',
+    profileWeeklyBidCapacity: 'Angebotskapazität',
+    profileWeeklyBidCapacityValue: '{n} Ausschreibungen / Woche',
     profileAvailableFrom: 'Verfügbar ab',
     profileCanShow: 'Referenzen',
     profileCannotShow: 'Nicht leistbar',
@@ -54,6 +56,8 @@ export default {
     verdictCandidate: 'Kandidat',
     verdictFlag: 'Hinweis',
     verdictHardFail: 'Ausschluss',
+    citationWithPage: '(siehe S. {page}: „{snippet}“)',
+    citationNoPage: '(Quelle: „{snippet}“)',
   },
   reasons: {
     OUT_OF_RADIUS: (ctx) =>

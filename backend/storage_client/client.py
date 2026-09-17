@@ -20,3 +20,10 @@ def delete_file(path: str) -> None:
 
 def file_exists(path: str) -> bool:
     return default_storage.exists(path)
+
+
+def download_file(path: str) -> bytes:
+    """Reads a stored file back into memory (e.g. for extraction to read a
+    previously-cached PDF)."""
+    with default_storage.open(path, "rb") as f:
+        return f.read()

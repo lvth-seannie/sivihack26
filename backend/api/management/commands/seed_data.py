@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from api.models import Company, Lot, Tender, Verdict
+from api.models import Company, Lot, Tender
 
 
 def _dt(iso: str) -> datetime:
@@ -92,7 +92,11 @@ COMPANIES = [
         "region_radius_km": 300,
         "contract_min": 8_000_000,
         "contract_max": 90_000_000,
-        "guarantee_ceiling": 9_000_000,
+        # Real constraint per the brief is estimating-team bid capacity, not
+        # bonding capital - guarantee_ceiling is genuinely unknown/unbounded
+        # for them, so rules 3/6 are skipped rather than guessed.
+        "guarantee_ceiling": None,
+        "weekly_bid_capacity": 3,
         "references_held": ["Hochbau", "Generalunternehmer", "Schlüsselfertigbau", "Wohnungsbau"],
         "capabilities_excluded": ["Straßenbau", "Kanalbau", "Brückenbau", "Tiefbau"],
         "available_from": None,
@@ -138,7 +142,6 @@ TENDERS = [
         "references_required": ["Straßenbau"],
         "construction_window": "Frühjahr 2027",
         "cpv_code": "45233120-6",
-        "raw_document_key": "tenders/TND-2026-0101.pdf",
         "extracted_at": "2026-09-17T09:00:00",
         "lots": [
             {"lot_number": "1", "description": "Fahrbahnsanierung Hauptabschnitt", "value": 850_000, "guarantee_required": 60_000, "references_required": ["Straßenbau"]},
@@ -154,7 +157,6 @@ TENDERS = [
         "references_required": ["Kanalbau"],
         "construction_window": "Herbst 2026",
         "cpv_code": "45232400-6",
-        "raw_document_key": "tenders/TND-2026-0102.pdf",
         "extracted_at": "2026-09-17T08:30:00",
         "lots": [
             {"lot_number": "1", "description": "Kanalsanierung Hauptstrang", "value": 2_800_000, "guarantee_required": 1_410_000, "references_required": ["Kanalbau"]},
@@ -170,7 +172,6 @@ TENDERS = [
         "references_required": ["Erdarbeiten"],
         "construction_window": "2027",
         "cpv_code": "45111200-0",
-        "raw_document_key": "tenders/TND-2026-0103.pdf",
         "extracted_at": "2026-09-16T14:00:00",
         "lots": [
             {"lot_number": "1", "description": "Erdarbeiten & Kanalanschluss", "value": 400_000, "guarantee_required": 28_000, "references_required": ["Erdarbeiten", "Kanalbau"]},
@@ -187,7 +188,6 @@ TENDERS = [
         "references_required": ["Hochbau"],
         "construction_window": "2027–2028",
         "cpv_code": "45454100-5",
-        "raw_document_key": "tenders/TND-2026-0104.pdf",
         "extracted_at": "2026-09-16T11:00:00",
         "lots": [
             {"lot_number": "1", "description": "Fassaden- und Innenausbau", "value": 3_200_000, "guarantee_required": 180_000, "references_required": ["Hochbau"]},
@@ -204,7 +204,6 @@ TENDERS = [
         "references_required": ["Brückenbau"],
         "construction_window": "2027",
         "cpv_code": "45221111-3",
-        "raw_document_key": "tenders/TND-2026-0105.pdf",
         "extracted_at": "2026-09-15T10:00:00",
         "lots": [
             {"lot_number": "1", "description": "Brückenbau komplett", "value": 1_100_000, "guarantee_required": 90_000, "references_required": ["Brückenbau"]},
@@ -220,7 +219,6 @@ TENDERS = [
         "references_required": ["Gleisbau"],
         "construction_window": "Q2 2027",
         "cpv_code": "45234115-5",
-        "raw_document_key": "tenders/TND-2026-0106.pdf",
         "extracted_at": "2026-09-15T09:00:00",
         "lots": [
             {"lot_number": "1", "description": "Gleisanschluss & Sicherungstechnik", "value": 780_000, "guarantee_required": 55_000, "references_required": ["Gleisbau"]},
@@ -236,7 +234,6 @@ TENDERS = [
         "references_required": ["Straßenbau", "Kanalbau"],
         "construction_window": "2027",
         "cpv_code": "45233120-6",
-        "raw_document_key": "tenders/TND-2026-0107.pdf",
         "extracted_at": "2026-09-14T09:00:00",
         "lots": [
             {"lot_number": "1", "description": "Straßen- und Kanalbau komplett", "value": 1_600_000, "guarantee_required": 110_000, "references_required": ["Straßenbau", "Kanalbau"]},
@@ -253,7 +250,6 @@ TENDERS = [
         "references_required": ["Elektroinstallation"],
         "construction_window": "Sommer 2027",
         "cpv_code": "45315300-1",
-        "raw_document_key": "tenders/TND-2026-0201.pdf",
         "extracted_at": "2026-09-17T07:30:00",
         "lots": [
             {"lot_number": "1", "description": "Elektroinstallation komplett", "value": 320_000, "guarantee_required": 40_000, "references_required": ["Elektroinstallation"]},
@@ -269,7 +265,6 @@ TENDERS = [
         "references_required": ["Brandmeldeanlagen"],
         "construction_window": "2027",
         "cpv_code": "45312100-8",
-        "raw_document_key": "tenders/TND-2026-0202.pdf",
         "extracted_at": "2026-09-16T09:30:00",
         "lots": [
             {"lot_number": "1", "description": "Brandmeldeanlage komplett", "value": 480_000, "guarantee_required": 285_000, "references_required": ["Brandmeldeanlagen"]},
@@ -285,7 +280,6 @@ TENDERS = [
         "references_required": ["Elektroinstallation", "Beleuchtung"],
         "construction_window": "Q1 2027",
         "cpv_code": "45315100-9",
-        "raw_document_key": "tenders/TND-2026-0203.pdf",
         "extracted_at": "2026-09-15T08:00:00",
         "lots": [
             {"lot_number": "1", "description": "Beleuchtung Bürotrakt", "value": 60_000, "guarantee_required": 8_000, "references_required": ["Beleuchtung"]},
@@ -302,7 +296,6 @@ TENDERS = [
         "references_required": ["Hochspannung"],
         "construction_window": "2027",
         "cpv_code": "45232221-4",
-        "raw_document_key": "tenders/TND-2026-0204.pdf",
         "extracted_at": "2026-09-14T10:30:00",
         "lots": [
             {"lot_number": "1", "description": "Hochspannungsanlage komplett", "value": 610_000, "guarantee_required": 150_000, "references_required": ["Hochspannung"]},
@@ -318,7 +311,6 @@ TENDERS = [
         "references_required": ["Elektroinstallation"],
         "construction_window": "Winter 2026/2027",
         "cpv_code": "45315300-1",
-        "raw_document_key": "tenders/TND-2026-0205.pdf",
         "extracted_at": "2026-09-13T09:00:00",
         "lots": [
             {"lot_number": "1", "description": "Elektro-Ausbau komplett", "value": 210_000, "guarantee_required": 25_000, "references_required": ["Elektroinstallation"]},
@@ -335,7 +327,6 @@ TENDERS = [
         "references_required": ["Generalunternehmer", "Schlüsselfertigbau"],
         "construction_window": "2027–2029",
         "cpv_code": "45210000-2",
-        "raw_document_key": "tenders/TND-2026-0301.pdf",
         "extracted_at": "2026-09-17T06:45:00",
         "lots": [
             {"lot_number": "1", "description": "Campus Nord", "value": 11_000_000, "guarantee_required": 900_000, "references_required": ["Generalunternehmer", "Schlüsselfertigbau"]},
@@ -352,7 +343,6 @@ TENDERS = [
         "references_required": ["Hochbau", "Generalunternehmer"],
         "construction_window": "2027",
         "cpv_code": "45454100-5",
-        "raw_document_key": "tenders/TND-2026-0302.pdf",
         "extracted_at": "2026-09-16T07:00:00",
         "lots": [
             {"lot_number": "1", "description": "Sanierung komplett", "value": 12_500_000, "guarantee_required": 900_000, "references_required": ["Hochbau", "Generalunternehmer"]},
@@ -368,7 +358,6 @@ TENDERS = [
         "references_required": ["Straßenbau", "Kanalbau"],
         "construction_window": "2027–2028",
         "cpv_code": "45233120-6",
-        "raw_document_key": "tenders/TND-2026-0303.pdf",
         "extracted_at": "2026-09-14T06:30:00",
         "lots": [
             {"lot_number": "1", "description": "Straßen- und Kanalbau komplett", "value": 9_500_000, "guarantee_required": 700_000, "references_required": ["Straßenbau", "Kanalbau"]},
@@ -384,7 +373,6 @@ TENDERS = [
         "references_required": ["Generalunternehmer", "Schlüsselfertigbau"],
         "construction_window": "2028–2031",
         "cpv_code": "45210000-2",
-        "raw_document_key": "tenders/TND-2026-0304.pdf",
         "extracted_at": "2026-09-13T07:00:00",
         "lots": [
             {"lot_number": "1", "description": "Rohbau & Fassade", "value": 45_000_000, "guarantee_required": 2_000_000, "references_required": ["Generalunternehmer"]},
@@ -399,11 +387,12 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args, **options):
-        Verdict.objects.all().delete()
-        Lot.objects.all().delete()
-        Tender.objects.all().delete()
+        # Only the 3 Appendix A companies ever live in this table, so a
+        # full replace is safe here (and cascades to delete their
+        # verdicts). Tenders/lots use update_or_create below instead of a
+        # blanket delete, since real tenders from load_cleaned_tenders /
+        # ingest_tenders share this same table and must survive a reseed.
         Company.objects.all().delete()
-
         for data in COMPANIES:
             Company.objects.create(**data)
         self.stdout.write(self.style.SUCCESS(f"Seeded {len(COMPANIES)} companies"))
@@ -411,9 +400,11 @@ class Command(BaseCommand):
         lot_count = 0
         for data in TENDERS:
             lots = data.pop("lots")
+            external_id = data.pop("external_id")
             data["extracted_at"] = _dt(data["extracted_at"])
-            tender = Tender.objects.create(**data)
+            tender, _ = Tender.objects.update_or_create(external_id=external_id, defaults=data)
             for lot_data in lots:
-                Lot.objects.create(tender=tender, **lot_data)
+                lot_number = lot_data.pop("lot_number")
+                Lot.objects.update_or_create(tender=tender, lot_number=lot_number, defaults=lot_data)
                 lot_count += 1
         self.stdout.write(self.style.SUCCESS(f"Seeded {len(TENDERS)} tenders, {lot_count} lots"))
