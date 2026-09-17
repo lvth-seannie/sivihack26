@@ -1,121 +1,127 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
+import { useCallback, useEffect, useState } from 'react'
+import logo from './assets/OmniNode_logo.png'
+import { fetchCompanies, fetchResults, screenCompany } from './api'
+import ResultsBoard from './components/ResultsBoard'
+import CompanySummary from './components/CompanySummary'
+import EmptyState from './components/EmptyState'
+import { formatDateTime } from './lib/format'
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [companies, setCompanies] = useState([])
+  const [selectedId, setSelectedId] = useState(null)
+  const [result, setResult] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+  const [flash, setFlash] = useState(false)
+
+  useEffect(() => {
+    fetchCompanies()
+      .then((list) => {
+        setCompanies(list)
+        if (list.length > 0) setSelectedId(list[0].id)
+      })
+      .catch(() => setError('Không thể tải danh sách công ty. Kiểm tra kết nối backend.'))
+  }, [])
+
+  useEffect(() => {
+    if (selectedId == null) return undefined
+    let cancelled = false
+    fetchResults(selectedId)
+      .then((data) => {
+        if (!cancelled) {
+          setResult(data)
+          setError(null)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setResult(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [selectedId])
+
+  const handleScreen = useCallback(async () => {
+    if (selectedId == null) return
+    setLoading(true)
+    setError(null)
+    try {
+      const data = await screenCompany(selectedId)
+      setResult(data)
+      setFlash(true)
+      setTimeout(() => setFlash(false), 1200)
+    } catch {
+      setError('Sàng lọc thất bại. Vui lòng thử lại.')
+    } finally {
+      setLoading(false)
+    }
+  }, [selectedId])
+
+  const selectedCompany = companies.find((c) => c.id === selectedId)
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+    <div className="app">
+      <header className="app-header">
+        <div className="app-header__brand">
+          <img src={logo} alt="OmniNode" className="app-header__logo" />
+          <div>
+            <h1>Tender AI Screening</h1>
+            <p>Sàng lọc gói thầu theo luật tất định — không dùng LLM</p>
+          </div>
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+      </header>
 
-      <div className="ticks"></div>
+      <main className="app-main">
+        <div className="control-bar">
+          <label className="control-bar__field">
+            <span>Công ty</span>
+            <select
+              value={selectedId ?? ''}
+              onChange={(e) => setSelectedId(Number(e.target.value))}
+              disabled={companies.length === 0}
+            >
+              {companies.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </label>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+          <button className="btn-primary" onClick={handleScreen} disabled={loading || selectedId == null}>
+            {loading ? 'Đang sàng lọc…' : 'Screen tenders'}
+          </button>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+          {result?.summary && (
+            <div className={`summary-chips${flash ? ' is-flash' : ''}`}>
+              <span className="chip chip--candidate">{result.summary.CANDIDATE} candidates</span>
+              <span className="chip chip--flag">{result.summary.FLAG} flags</span>
+              <span className="chip chip--hardfail">{result.summary.HARD_FAIL} hard fails</span>
+            </div>
+          )}
+
+          {result?.generated_at && (
+            <span className="control-bar__status">Cập nhật lúc {formatDateTime(result.generated_at)}</span>
+          )}
+        </div>
+
+        {selectedCompany && <CompanySummary company={selectedCompany} />}
+
+        {error && <p className="app-error">{error}</p>}
+
+        {!result && !error && <p className="app-loading">Đang tải…</p>}
+
+        {result &&
+          (result.screened ? (
+            <div className={`results-board-wrap${flash ? ' is-flash' : ''}`} key={selectedId}>
+              <ResultsBoard tenders={result.tenders} />
+            </div>
+          ) : (
+            <EmptyState onScreen={handleScreen} loading={loading} />
+          ))}
+      </main>
+    </div>
   )
 }
 
