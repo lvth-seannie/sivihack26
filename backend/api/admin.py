@@ -23,5 +23,5 @@ class TenderAdmin(admin.ModelAdmin):
 
 @admin.register(Verdict)
 class VerdictAdmin(admin.ModelAdmin):
-    list_display = ("company", "tender", "lot", "verdict", "evaluated_at")
-    list_filter = ("verdict", "company")
+    list_display = ("company", "tender", "lot", "verdict", "reason_code", "evaluated_at")
+    list_filter = ("verdict", "reason_code", "company")

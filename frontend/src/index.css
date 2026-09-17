@@ -61,17 +61,17 @@
     --accent-strong: #22c3ab;
     --accent-bg: rgba(45, 217, 191, 0.16);
 
-    --candidate: #34d399;
-    --candidate-bg: rgba(52, 211, 153, 0.13);
-    --candidate-border: rgba(52, 211, 153, 0.38);
+    --candidate: #4ade80;
+    --candidate-bg: rgba(74, 222, 128, 0.18);
+    --candidate-border: rgba(74, 222, 128, 0.45);
 
     --flag: #fbbf24;
-    --flag-bg: rgba(251, 191, 36, 0.13);
-    --flag-border: rgba(251, 191, 36, 0.38);
+    --flag-bg: rgba(251, 191, 36, 0.18);
+    --flag-border: rgba(251, 191, 36, 0.45);
 
-    --hardfail: #f87171;
-    --hardfail-bg: rgba(248, 113, 113, 0.13);
-    --hardfail-border: rgba(248, 113, 113, 0.38);
+    --hardfail: #fb7185;
+    --hardfail-bg: rgba(251, 113, 133, 0.18);
+    --hardfail-border: rgba(251, 113, 133, 0.45);
 
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
     --shadow-lg: 0 16px 32px rgba(0, 0, 0, 0.5);

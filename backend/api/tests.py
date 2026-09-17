@@ -3,17 +3,26 @@ from unittest import TestCase
 
 from django.test import TestCase as DjangoTestCase
 
-from .engine import CANDIDATE, FLAG, HARD_FAIL, ScreenCompany, ScreenItem, evaluate
+from .engine import (
+    CANDIDATE,
+    FLAG,
+    HARD_FAIL,
+    REASON_CAPABILITY_EXCLUDED,
+    REASON_OUT_OF_RADIUS,
+    ScreenCompany,
+    ScreenItem,
+    evaluate,
+)
 from .models import Company, Lot, Tender
 from .services import run_screening, serialize_result
 
 BRENNER = ScreenCompany(
-    region_radius_km=D(80),
-    contract_min=D(50_000),
-    contract_max=D(2_000_000),
-    guarantee_ceiling=D(100_000),
-    references_held=["Tiefbau", "Kanalbau", "Straßenbau", "Abbrucharbeiten"],
-    capabilities_excluded=["Elektroinstallation", "Abbrucharbeiten"],
+    region_radius_km=D(150),
+    contract_min=D(400_000),
+    contract_max=D(4_000_000),
+    guarantee_ceiling=D(1_500_000),
+    references_held=["Straßenbau", "Kanalbau", "Erdarbeiten", "Tiefbau", "Gleisbau"],
+    capabilities_excluded=["Gleisbau"],
 )
 
 
@@ -21,38 +30,41 @@ class EvaluateTests(TestCase):
     """Pure rule-engine tests - no Django DB required."""
 
     def test_out_of_radius_hard_fails_first(self):
-        item = ScreenItem(distance_km=D(95), value=D(100_000), references_required=["Tiefbau"])
-        verdict, reason = evaluate(item, BRENNER)
+        item = ScreenItem(distance_km=D(180), value=D(1_000_000), references_required=["Tiefbau"])
+        verdict, reason_code = evaluate(item, BRENNER)
         self.assertEqual(verdict, HARD_FAIL)
-        self.assertEqual(reason, "Vượt bán kính hoạt động")
+        self.assertEqual(reason_code, REASON_OUT_OF_RADIUS)
 
     def test_value_out_of_range(self):
-        item = ScreenItem(distance_km=D(10), value=D(3_000_000))
+        item = ScreenItem(distance_km=D(10), value=D(5_000_000))
         verdict, _ = evaluate(item, BRENNER)
         self.assertEqual(verdict, HARD_FAIL)
 
     def test_guarantee_over_ceiling(self):
-        item = ScreenItem(distance_km=D(10), value=D(100_000), guarantee_required=D(150_000))
+        item = ScreenItem(distance_km=D(10), value=D(1_000_000), guarantee_required=D(1_600_000))
         verdict, _ = evaluate(item, BRENNER)
         self.assertEqual(verdict, HARD_FAIL)
 
     def test_missing_reference(self):
-        item = ScreenItem(distance_km=D(10), value=D(100_000), references_required=["Fassadenbau"])
+        item = ScreenItem(distance_km=D(10), value=D(1_000_000), references_required=["Hochbau"])
         verdict, _ = evaluate(item, BRENNER)
         self.assertEqual(verdict, HARD_FAIL)
 
     def test_excluded_capability_even_if_referenced(self):
-        item = ScreenItem(distance_km=D(10), value=D(100_000), references_required=["Abbrucharbeiten"])
-        verdict, _ = evaluate(item, BRENNER)
+        item = ScreenItem(distance_km=D(10), value=D(1_000_000), references_required=["Gleisbau"])
+        verdict, reason_code = evaluate(item, BRENNER)
         self.assertEqual(verdict, HARD_FAIL)
+        self.assertEqual(reason_code, REASON_CAPABILITY_EXCLUDED)
 
     def test_guarantee_near_ceiling_flags(self):
-        item = ScreenItem(distance_km=D(10), value=D(100_000), guarantee_required=D(95_000))
+        item = ScreenItem(distance_km=D(10), value=D(1_000_000), guarantee_required=D(1_400_000))
         verdict, _ = evaluate(item, BRENNER)
         self.assertEqual(verdict, FLAG)
 
     def test_clean_tender_is_candidate(self):
-        item = ScreenItem(distance_km=D(10), value=D(100_000), guarantee_required=D(10_000), references_required=["Tiefbau"])
+        item = ScreenItem(
+            distance_km=D(10), value=D(1_000_000), guarantee_required=D(100_000), references_required=["Tiefbau"]
+        )
         verdict, _ = evaluate(item, BRENNER)
         self.assertEqual(verdict, CANDIDATE)
 
@@ -65,26 +77,26 @@ class ScreeningServiceTests(DjangoTestCase):
         self.company = Company.objects.create(
             name="Brenner & Sohn Tiefbau GmbH",
             region_center="Augsburg",
-            region_radius_km=80,
-            contract_min=50_000,
-            contract_max=2_000_000,
-            guarantee_ceiling=100_000,
+            region_radius_km=150,
+            contract_min=400_000,
+            contract_max=4_000_000,
+            guarantee_ceiling=1_500_000,
             references_held=["Tiefbau", "Kanalbau"],
-            capabilities_excluded=["Elektroinstallation"],
+            capabilities_excluded=["Hochbau"],
         )
         self.tender = Tender.objects.create(
             external_id="T-1",
             title="Too big for the tender, fine for a lot",
-            distance_from_augsburg_km=5,
-            contract_value=3_000_000,
-            guarantee_required=50_000,
+            location="Augsburg",
+            contract_value=5_000_000,
+            guarantee_required=200_000,
             references_required=["Tiefbau"],
         )
         Lot.objects.create(
             tender=self.tender,
             lot_number="1",
-            value=200_000,
-            guarantee_required=20_000,
+            value=900_000,
+            guarantee_required=60_000,
             references_required=["Tiefbau"],
         )
 
