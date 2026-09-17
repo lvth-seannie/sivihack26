@@ -62,7 +62,7 @@ def run_screening(company: Company) -> list[Verdict]:
     for tender in tenders:
         item = _tender_item(tender, company)
         verdict, reason_code = evaluate(item, screen_company)
-        context = build_context(item, screen_company, reason_code)
+        context = build_context(item, screen_company, reason_code, tender.source_citations)
         verdicts.append(
             Verdict(
                 company=company,
@@ -77,7 +77,9 @@ def run_screening(company: Company) -> list[Verdict]:
         for lot in tender.lots.all():
             lot_item = _lot_item(lot, tender, company)
             lot_verdict, lot_reason_code = evaluate(lot_item, screen_company)
-            lot_context = build_context(lot_item, screen_company, lot_reason_code)
+            lot_context = build_context(
+                lot_item, screen_company, lot_reason_code, lot.source_citations
+            )
             verdicts.append(
                 Verdict(
                     company=company,

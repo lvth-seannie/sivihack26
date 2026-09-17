@@ -12,7 +12,8 @@ class CompanyOut(Schema):
     region_radius_km: Decimal
     contract_min: Decimal
     contract_max: Decimal
-    guarantee_ceiling: Decimal
+    guarantee_ceiling: Optional[Decimal] = None
+    weekly_bid_capacity: Optional[int] = None
     references_held: List[str]
     capabilities_excluded: List[str]
     available_from: Optional[date] = None

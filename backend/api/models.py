@@ -9,7 +9,12 @@ class Company(models.Model):
     region_radius_km = models.DecimalField(max_digits=8, decimal_places=2)
     contract_min = models.DecimalField(max_digits=14, decimal_places=2)
     contract_max = models.DecimalField(max_digits=14, decimal_places=2)
-    guarantee_ceiling = models.DecimalField(max_digits=14, decimal_places=2)
+    guarantee_ceiling = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    # Some companies are bottlenecked by how many bids their estimating team
+    # can chase per week, not by guarantee capital (e.g. a large GC that can
+    # bond anything but can only seriously pursue ~3 tenders/week). Informational
+    # only for now - not read by the rule engine (see engine.py note).
+    weekly_bid_capacity = models.PositiveIntegerField(null=True, blank=True)
     references_held = ArrayField(models.CharField(max_length=255), default=list, blank=True)
     capabilities_excluded = ArrayField(models.CharField(max_length=255), default=list, blank=True)
     available_from = models.DateField(null=True, blank=True)
@@ -46,6 +51,11 @@ class Tender(models.Model):
     cpv_code = models.CharField(max_length=50, blank=True)
     raw_document_key = models.CharField(max_length=500, blank=True)
     extracted_at = models.DateTimeField(null=True, blank=True)
+    # Per-field {"guarantee_required": {"snippet": ..., "page": ...}, ...}
+    # captured by the extraction step, keyed by the Tender field it backs.
+    # engine.build_context() looks these up so a HARD_FAIL/FLAG reason can
+    # quote its source instead of just naming the rule.
+    source_citations = models.JSONField(default=dict, blank=True, encoder=DjangoJSONEncoder)
 
     class Meta:
         ordering = ["-extracted_at", "-id"]
@@ -63,6 +73,7 @@ class Lot(models.Model):
         max_digits=14, decimal_places=2, null=True, blank=True
     )
     references_required = ArrayField(models.CharField(max_length=255), default=list, blank=True)
+    source_citations = models.JSONField(default=dict, blank=True, encoder=DjangoJSONEncoder)
 
     class Meta:
         ordering = ["lot_number"]

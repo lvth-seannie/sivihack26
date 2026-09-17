@@ -34,6 +34,16 @@ REASON_CANDIDATE_OK = "CANDIDATE_OK"
 _FLAG_RATIO_LOW = Decimal("0.9")
 _FLAG_RATIO_HIGH = Decimal("1")
 
+# Which extracted field's citation (from Tender/Lot.source_citations) backs
+# each reason, if any - radius/value come from structured notice metadata,
+# not PDF extraction, so they never have a citation.
+_CITATION_FIELD_BY_REASON = {
+    REASON_GUARANTEE_OVER_CEILING: "guarantee_required",
+    REASON_GUARANTEE_NEAR_CEILING: "guarantee_required",
+    REASON_MISSING_REFERENCES: "references_required",
+    REASON_CAPABILITY_EXCLUDED: "references_required",
+}
+
 
 @dataclass(frozen=True)
 class ScreenItem:
@@ -47,12 +57,18 @@ class ScreenItem:
 
 @dataclass(frozen=True)
 class ScreenCompany:
-    """Normalized view of a company profile for rule evaluation."""
+    """Normalized view of a company profile for rule evaluation.
+
+    guarantee_ceiling is optional: a company whose real constraint is bid
+    *capacity* rather than bonding capital (see Company.weekly_bid_capacity)
+    may simply not have a known ceiling - rules 3/6 are skipped, not
+    hard-failed, when it's unset.
+    """
 
     region_radius_km: Decimal
     contract_min: Decimal
     contract_max: Decimal
-    guarantee_ceiling: Decimal
+    guarantee_ceiling: Optional[Decimal]
     references_held: Sequence[str]
     capabilities_excluded: Sequence[str]
 
@@ -70,6 +86,7 @@ def evaluate(tender_or_lot: ScreenItem, company: ScreenCompany) -> Tuple[str, st
 
     if (
         item.guarantee_required is not None
+        and company.guarantee_ceiling is not None
         and item.guarantee_required > company.guarantee_ceiling
     ):
         return HARD_FAIL, REASON_GUARANTEE_OVER_CEILING
@@ -89,42 +106,61 @@ def evaluate(tender_or_lot: ScreenItem, company: ScreenCompany) -> Tuple[str, st
 
 
 def build_context(
-    item: ScreenItem, company: ScreenCompany, reason_code: str
+    item: ScreenItem,
+    company: ScreenCompany,
+    reason_code: str,
+    citations: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Language-neutral facts behind a reason_code, for the frontend to
-    render into a localized, citable sentence."""
+    render into a localized, citable sentence.
+
+    `citations` is the raw Tender/Lot.source_citations dict (field name ->
+    {"snippet": str, "page": int}), as captured by the extraction step. If
+    the field backing this reason has a citation, it's included under the
+    "citation" key so the frontend can append "(see p.14: '...')" - falling
+    back to the plain reason when extraction hasn't run yet or the source
+    document didn't have anything to cite.
+    """
+
+    field_name = _CITATION_FIELD_BY_REASON.get(reason_code)
+    citation = (citations or {}).get(field_name) if field_name else None
 
     if reason_code == REASON_OUT_OF_RADIUS:
-        return {
+        context = {
             "distance_km": item.distance_km,
             "radius_km": company.region_radius_km,
         }
-    if reason_code == REASON_OUT_OF_VALUE_RANGE:
-        return {
+    elif reason_code == REASON_OUT_OF_VALUE_RANGE:
+        context = {
             "value": item.value,
             "min": company.contract_min,
             "max": company.contract_max,
         }
-    if reason_code == REASON_GUARANTEE_OVER_CEILING:
-        return {
+    elif reason_code == REASON_GUARANTEE_OVER_CEILING:
+        context = {
             "guarantee_required": item.guarantee_required,
             "ceiling": company.guarantee_ceiling,
         }
-    if reason_code == REASON_MISSING_REFERENCES:
+    elif reason_code == REASON_MISSING_REFERENCES:
         missing = [r for r in item.references_required if r not in company.references_held]
-        return {"missing": missing}
-    if reason_code == REASON_CAPABILITY_EXCLUDED:
+        context = {"missing": missing}
+    elif reason_code == REASON_CAPABILITY_EXCLUDED:
         excluded = [r for r in item.references_required if r in company.capabilities_excluded]
-        return {"excluded": excluded}
-    if reason_code == REASON_GUARANTEE_NEAR_CEILING:
+        context = {"excluded": excluded}
+    elif reason_code == REASON_GUARANTEE_NEAR_CEILING:
         ratio_pct = (
             (item.guarantee_required / company.guarantee_ceiling * 100)
             if company.guarantee_ceiling
             else Decimal("0")
         )
-        return {
+        context = {
             "guarantee_required": item.guarantee_required,
             "ceiling": company.guarantee_ceiling,
             "ratio_pct": round(ratio_pct, 1),
         }
-    return {}
+    else:
+        context = {}
+
+    if citation:
+        context["citation"] = citation
+    return context
