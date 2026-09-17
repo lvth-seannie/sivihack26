@@ -1,12 +1,14 @@
 """Screening orchestration: adapts ORM objects to the pure rule engine in
 engine.py, persists Verdict rows, and serializes results for the API."""
 
+from decimal import Decimal
 from typing import Optional
 
 from django.db import transaction
 from django.db.models import QuerySet
 
-from .engine import ScreenCompany, ScreenItem, build_snippet, evaluate
+from . import geo
+from .engine import ScreenCompany, ScreenItem, build_context, evaluate
 from .models import Company, Lot, Tender, Verdict
 
 
@@ -21,18 +23,23 @@ def _to_screen_company(company: Company) -> ScreenCompany:
     )
 
 
-def _tender_item(tender: Tender) -> ScreenItem:
+def _distance_to(company: Company, tender: Tender) -> Optional[Decimal]:
+    km = geo.distance_km(company.region_center, tender.location)
+    return None if km is None else Decimal(str(km))
+
+
+def _tender_item(tender: Tender, company: Company) -> ScreenItem:
     return ScreenItem(
-        distance_km=tender.distance_from_augsburg_km,
+        distance_km=_distance_to(company, tender),
         value=tender.contract_value,
         guarantee_required=tender.guarantee_required,
         references_required=list(tender.references_required),
     )
 
 
-def _lot_item(lot: Lot, tender: Tender) -> ScreenItem:
+def _lot_item(lot: Lot, tender: Tender, company: Company) -> ScreenItem:
     return ScreenItem(
-        distance_km=tender.distance_from_augsburg_km,
+        distance_km=_distance_to(company, tender),
         value=lot.value,
         guarantee_required=lot.guarantee_required,
         references_required=list(lot.references_required),
@@ -53,34 +60,32 @@ def run_screening(company: Company) -> list[Verdict]:
 
     verdicts: list[Verdict] = []
     for tender in tenders:
-        item = _tender_item(tender)
-        verdict, reason = evaluate(item, screen_company)
-        snippet, page = build_snippet(item, screen_company, verdict, reason)
+        item = _tender_item(tender, company)
+        verdict, reason_code = evaluate(item, screen_company)
+        context = build_context(item, screen_company, reason_code)
         verdicts.append(
             Verdict(
                 company=company,
                 tender=tender,
                 lot=None,
                 verdict=verdict,
-                reason=reason,
-                source_snippet=snippet,
-                source_page=page,
+                reason_code=reason_code,
+                context=context,
             )
         )
 
         for lot in tender.lots.all():
-            lot_item = _lot_item(lot, tender)
-            lot_verdict, lot_reason = evaluate(lot_item, screen_company)
-            lot_snippet, lot_page = build_snippet(lot_item, screen_company, lot_verdict, lot_reason)
+            lot_item = _lot_item(lot, tender, company)
+            lot_verdict, lot_reason_code = evaluate(lot_item, screen_company)
+            lot_context = build_context(lot_item, screen_company, lot_reason_code)
             verdicts.append(
                 Verdict(
                     company=company,
                     tender=tender,
                     lot=lot,
                     verdict=lot_verdict,
-                    reason=lot_reason,
-                    source_snippet=lot_snippet,
-                    source_page=lot_page,
+                    reason_code=lot_reason_code,
+                    context=lot_context,
                 )
             )
 
@@ -94,7 +99,7 @@ def _lot_sort_key(lot_number: str):
 
 def serialize_result(company: Company) -> dict:
     """Build the API payload from whatever Verdict rows are currently cached
-    for `company` — does not run any evaluation itself."""
+    for `company` - does not run any evaluation itself."""
 
     verdicts = (
         Verdict.objects.filter(company=company)
@@ -139,8 +144,8 @@ def serialize_result(company: Company) -> dict:
                     "guarantee_required": lv.lot.guarantee_required,
                     "references_required": lv.lot.references_required,
                     "verdict": lv.verdict,
-                    "reason": lv.reason,
-                    "source_snippet": lv.source_snippet,
+                    "reason_code": lv.reason_code,
+                    "context": lv.context,
                     "source_page": lv.source_page,
                     "differs_from_tender": lv.verdict != tv.verdict,
                 }
@@ -153,7 +158,6 @@ def serialize_result(company: Company) -> dict:
                 "title": tender.title,
                 "source_url": tender.source_url,
                 "location": tender.location,
-                "distance_from_augsburg_km": tender.distance_from_augsburg_km,
                 "contract_value": tender.contract_value,
                 "guarantee_required": tender.guarantee_required,
                 "references_required": tender.references_required,
@@ -161,8 +165,8 @@ def serialize_result(company: Company) -> dict:
                 "cpv_code": tender.cpv_code,
                 "extracted_at": tender.extracted_at,
                 "verdict": tv.verdict,
-                "reason": tv.reason,
-                "source_snippet": tv.source_snippet,
+                "reason_code": tv.reason_code,
+                "context": tv.context,
                 "source_page": tv.source_page,
                 "lots": lots_out,
             }
