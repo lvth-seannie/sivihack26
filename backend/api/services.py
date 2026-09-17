@@ -1,0 +1,179 @@
+"""Screening orchestration: adapts ORM objects to the pure rule engine in
+engine.py, persists Verdict rows, and serializes results for the API."""
+
+from typing import Optional
+
+from django.db import transaction
+from django.db.models import QuerySet
+
+from .engine import ScreenCompany, ScreenItem, build_snippet, evaluate
+from .models import Company, Lot, Tender, Verdict
+
+
+def _to_screen_company(company: Company) -> ScreenCompany:
+    return ScreenCompany(
+        region_radius_km=company.region_radius_km,
+        contract_min=company.contract_min,
+        contract_max=company.contract_max,
+        guarantee_ceiling=company.guarantee_ceiling,
+        references_held=list(company.references_held),
+        capabilities_excluded=list(company.capabilities_excluded),
+    )
+
+
+def _tender_item(tender: Tender) -> ScreenItem:
+    return ScreenItem(
+        distance_km=tender.distance_from_augsburg_km,
+        value=tender.contract_value,
+        guarantee_required=tender.guarantee_required,
+        references_required=list(tender.references_required),
+    )
+
+
+def _lot_item(lot: Lot, tender: Tender) -> ScreenItem:
+    return ScreenItem(
+        distance_km=tender.distance_from_augsburg_km,
+        value=lot.value,
+        guarantee_required=lot.guarantee_required,
+        references_required=list(lot.references_required),
+    )
+
+
+@transaction.atomic
+def run_screening(company: Company) -> list[Verdict]:
+    """Evaluate every tender and lot against `company` and persist the
+    verdicts, replacing whatever was cached for this company before."""
+
+    screen_company = _to_screen_company(company)
+    tenders: QuerySet[Tender] = Tender.objects.prefetch_related("lots").order_by(
+        "-extracted_at", "-id"
+    )
+
+    Verdict.objects.filter(company=company).delete()
+
+    verdicts: list[Verdict] = []
+    for tender in tenders:
+        item = _tender_item(tender)
+        verdict, reason = evaluate(item, screen_company)
+        snippet, page = build_snippet(item, screen_company, verdict, reason)
+        verdicts.append(
+            Verdict(
+                company=company,
+                tender=tender,
+                lot=None,
+                verdict=verdict,
+                reason=reason,
+                source_snippet=snippet,
+                source_page=page,
+            )
+        )
+
+        for lot in tender.lots.all():
+            lot_item = _lot_item(lot, tender)
+            lot_verdict, lot_reason = evaluate(lot_item, screen_company)
+            lot_snippet, lot_page = build_snippet(lot_item, screen_company, lot_verdict, lot_reason)
+            verdicts.append(
+                Verdict(
+                    company=company,
+                    tender=tender,
+                    lot=lot,
+                    verdict=lot_verdict,
+                    reason=lot_reason,
+                    source_snippet=lot_snippet,
+                    source_page=lot_page,
+                )
+            )
+
+    Verdict.objects.bulk_create(verdicts)
+    return verdicts
+
+
+def _lot_sort_key(lot_number: str):
+    return (0, int(lot_number)) if lot_number.isdigit() else (1, lot_number)
+
+
+def serialize_result(company: Company) -> dict:
+    """Build the API payload from whatever Verdict rows are currently cached
+    for `company` — does not run any evaluation itself."""
+
+    verdicts = (
+        Verdict.objects.filter(company=company)
+        .select_related("tender", "lot")
+        .order_by("id")
+    )
+
+    tenders_map: dict[int, dict] = {}
+    order: list[int] = []
+    latest_evaluated = None
+
+    for v in verdicts:
+        if v.tender_id not in tenders_map:
+            tenders_map[v.tender_id] = {"tender": v.tender, "tender_verdict": None, "lots": []}
+            order.append(v.tender_id)
+        if v.lot_id is None:
+            tenders_map[v.tender_id]["tender_verdict"] = v
+        else:
+            tenders_map[v.tender_id]["lots"].append(v)
+        if latest_evaluated is None or v.evaluated_at > latest_evaluated:
+            latest_evaluated = v.evaluated_at
+
+    summary = {"CANDIDATE": 0, "FLAG": 0, "HARD_FAIL": 0}
+    tenders_out = []
+
+    for tid in order:
+        entry = tenders_map[tid]
+        tender = entry["tender"]
+        tv: Optional[Verdict] = entry["tender_verdict"]
+        if tv is None:
+            continue
+        summary[tv.verdict] += 1
+
+        lots_out = []
+        for lv in sorted(entry["lots"], key=lambda x: _lot_sort_key(x.lot.lot_number)):
+            lots_out.append(
+                {
+                    "id": lv.lot.id,
+                    "lot_number": lv.lot.lot_number,
+                    "description": lv.lot.description,
+                    "value": lv.lot.value,
+                    "guarantee_required": lv.lot.guarantee_required,
+                    "references_required": lv.lot.references_required,
+                    "verdict": lv.verdict,
+                    "reason": lv.reason,
+                    "source_snippet": lv.source_snippet,
+                    "source_page": lv.source_page,
+                    "differs_from_tender": lv.verdict != tv.verdict,
+                }
+            )
+
+        tenders_out.append(
+            {
+                "id": tender.id,
+                "external_id": tender.external_id,
+                "title": tender.title,
+                "source_url": tender.source_url,
+                "location": tender.location,
+                "distance_from_augsburg_km": tender.distance_from_augsburg_km,
+                "contract_value": tender.contract_value,
+                "guarantee_required": tender.guarantee_required,
+                "references_required": tender.references_required,
+                "construction_window": tender.construction_window,
+                "cpv_code": tender.cpv_code,
+                "extracted_at": tender.extracted_at,
+                "verdict": tv.verdict,
+                "reason": tv.reason,
+                "source_snippet": tv.source_snippet,
+                "source_page": tv.source_page,
+                "lots": lots_out,
+            }
+        )
+
+    tenders_out.sort(key=lambda t: (t["extracted_at"] is not None, t["extracted_at"]), reverse=True)
+
+    return {
+        "company": company,
+        "screened": bool(order),
+        "generated_at": latest_evaluated,
+        "summary": summary,
+        "tenders": tenders_out,
+    }

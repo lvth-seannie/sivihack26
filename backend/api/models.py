@@ -1,3 +1,87 @@
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
-# Create your models here.
+
+class Company(models.Model):
+    name = models.CharField(max_length=255)
+    region_center = models.CharField(max_length=255)
+    region_radius_km = models.DecimalField(max_digits=8, decimal_places=2)
+    contract_min = models.DecimalField(max_digits=14, decimal_places=2)
+    contract_max = models.DecimalField(max_digits=14, decimal_places=2)
+    guarantee_ceiling = models.DecimalField(max_digits=14, decimal_places=2)
+    references_held = ArrayField(models.CharField(max_length=255), default=list, blank=True)
+    capabilities_excluded = ArrayField(models.CharField(max_length=255), default=list, blank=True)
+    available_from = models.DateField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+class Tender(models.Model):
+    external_id = models.CharField(max_length=255, unique=True)
+    title = models.CharField(max_length=500)
+    source_url = models.URLField(max_length=1000, blank=True)
+    location = models.CharField(max_length=255, blank=True)
+    distance_from_augsburg_km = models.DecimalField(
+        max_digits=8, decimal_places=2, null=True, blank=True
+    )
+    contract_value = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    guarantee_required = models.DecimalField(
+        max_digits=14, decimal_places=2, null=True, blank=True
+    )
+    references_required = ArrayField(models.CharField(max_length=255), default=list, blank=True)
+    construction_window = models.CharField(max_length=255, blank=True)
+    cpv_code = models.CharField(max_length=50, blank=True)
+    raw_document_key = models.CharField(max_length=500, blank=True)
+    extracted_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-extracted_at", "-id"]
+
+    def __str__(self):
+        return self.title
+
+
+class Lot(models.Model):
+    tender = models.ForeignKey(Tender, related_name="lots", on_delete=models.CASCADE)
+    lot_number = models.CharField(max_length=50)
+    description = models.TextField(blank=True)
+    value = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    guarantee_required = models.DecimalField(
+        max_digits=14, decimal_places=2, null=True, blank=True
+    )
+    references_required = ArrayField(models.CharField(max_length=255), default=list, blank=True)
+
+    class Meta:
+        ordering = ["lot_number"]
+
+    def __str__(self):
+        return f"{self.tender.title} — Lot {self.lot_number}"
+
+
+class Verdict(models.Model):
+    class VerdictType(models.TextChoices):
+        HARD_FAIL = "HARD_FAIL", "Hard fail"
+        FLAG = "FLAG", "Flag"
+        CANDIDATE = "CANDIDATE", "Candidate"
+
+    company = models.ForeignKey(Company, related_name="verdicts", on_delete=models.CASCADE)
+    tender = models.ForeignKey(Tender, related_name="verdicts", on_delete=models.CASCADE)
+    lot = models.ForeignKey(
+        Lot, related_name="verdicts", null=True, blank=True, on_delete=models.CASCADE
+    )
+    verdict = models.CharField(max_length=20, choices=VerdictType.choices)
+    reason = models.CharField(max_length=500)
+    source_snippet = models.TextField(blank=True)
+    source_page = models.PositiveIntegerField(null=True, blank=True)
+    evaluated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["tender_id", "lot_id"]
+
+    def __str__(self):
+        target = f"Lot {self.lot.lot_number}" if self.lot_id else "Tender"
+        return f"{self.company} · {self.tender} · {target} → {self.verdict}"
