@@ -1,1 +1,56 @@
+# --- Environment / secrets ---
+.env
+.env.local
+.env.*.local
+
+# --- Backend (Python / Django) ---
+__pycache__/
+*.py[cod]
+*$py.class
 *.venv
+venv/
+env/
+ENV/
+.Python
+pip-wheel-metadata/
+*.egg-info/
+.eggs/
+db.sqlite3
+db.sqlite3-journal
+*.log
+staticfiles/
+static_root/
+media/
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+celerybeat-schedule
+celerybeat.pid
+
+# --- Frontend (Node / Vite) ---
+node_modules/
+dist/
+dist-ssr/
+build/
+.vite/
+*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# --- Editors ---
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*~
+
+# --- OS ---
+.DS_Store
+Thumbs.db

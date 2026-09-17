@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
+
 from decouple import config as env
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -26,7 +28,7 @@ SECRET_KEY = 'django-insecure-fby@c(1a(gh36)%v(jr*8ygpqquai0=_h-pnvm=(h1i%s8hki%
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = env('ALLOWED_HOSTS', default='').split(',')
+ALLOWED_HOSTS = [h for h in env('ALLOWED_HOSTS', default='').split(',') if h]
 
 
 # Application definition
@@ -41,7 +43,7 @@ INSTALLED_APPS = [
 INSTALLED_APPS += ['corsheaders', 'ninja', 'storages', 'core', 'api']       # added for CORS support, API endpoints, and S3 storage
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware'                                 # added for CORS support
+    'corsheaders.middleware.CorsMiddleware',                                # added for CORS support
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -51,7 +53,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-CORS_ALLOWED_ORIGINS = env('CORS_ALLOWED_ORIGINS', default='').split(',')   # added for CORS support
+CORS_ALLOWED_ORIGINS = [o for o in env('CORS_ALLOWED_ORIGINS', default='').split(',') if o]  # added for CORS support
 
 ROOT_URLCONF = 'config.urls'
 
@@ -77,17 +79,36 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql', 
-        'NAME': env('DB_NAME'),
-        'USER': env('DB_USER'),
-        'PASSWORD': env('DB_PASSWORD'),
-        'HOST': env('DB_HOST'),   # Neon pooled host, see Section 6
-        'PORT': env('DB_PORT', default='5432'),
-        'OPTIONS': {'sslmode': 'require'},
+DATABASE_URL = env('DATABASE_URL', default='')  # Neon's single connection-string form
+
+if DATABASE_URL:
+    _db_url = urlparse(DATABASE_URL)
+    _db_query = parse_qs(_db_url.query)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': _db_url.path.lstrip('/'),
+            'USER': _db_url.username,
+            'PASSWORD': _db_url.password,
+            'HOST': _db_url.hostname,
+            'PORT': _db_url.port or 5432,
+            'OPTIONS': {
+                'sslmode': _db_query.get('sslmode', [env('DB_SSLMODE', default='require')])[0],
+            },
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': env('DB_NAME'),
+            'USER': env('DB_USER'),
+            'PASSWORD': env('DB_PASSWORD'),
+            'HOST': env('DB_HOST'),   # Neon pooled host, see Section 6
+            'PORT': env('DB_PORT', default='5432'),
+            'OPTIONS': {'sslmode': env('DB_SSLMODE', default='require')},
+        }
+    }
 
 # Cloudflare R2 (S3-compatible)
 AWS_ACCESS_KEY_ID = env('R2_ACCESS_KEY_ID', default='')
