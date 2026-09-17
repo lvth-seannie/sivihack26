@@ -1,6 +1,6 @@
 from datetime import date, datetime
 from decimal import Decimal
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from ninja import Schema
 
@@ -16,6 +16,13 @@ class CompanyOut(Schema):
     references_held: List[str]
     capabilities_excluded: List[str]
     available_from: Optional[date] = None
+    founded_year: Optional[int] = None
+    employee_count: Optional[int] = None
+    revenue_eur: Optional[Decimal] = None
+    description: str
+    tagline: str
+    can_show: List[str]
+    cannot_show: List[str]
 
 
 class LotResultOut(Schema):
@@ -26,8 +33,8 @@ class LotResultOut(Schema):
     guarantee_required: Optional[Decimal] = None
     references_required: List[str]
     verdict: str
-    reason: str
-    source_snippet: str
+    reason_code: str
+    context: Dict[str, Any]
     source_page: Optional[int] = None
     differs_from_tender: bool
 
@@ -38,7 +45,6 @@ class TenderResultOut(Schema):
     title: str
     source_url: str
     location: str
-    distance_from_augsburg_km: Optional[Decimal] = None
     contract_value: Optional[Decimal] = None
     guarantee_required: Optional[Decimal] = None
     references_required: List[str]
@@ -46,8 +52,8 @@ class TenderResultOut(Schema):
     cpv_code: str
     extracted_at: Optional[datetime] = None
     verdict: str
-    reason: str
-    source_snippet: str
+    reason_code: str
+    context: Dict[str, Any]
     source_page: Optional[int] = None
     lots: List[LotResultOut]
 

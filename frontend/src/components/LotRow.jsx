@@ -1,39 +1,29 @@
-import { useState } from 'react'
 import VerdictBadge from './VerdictBadge'
-import DetailPanel from './DetailPanel'
+import CitationRow from './CitationRow'
+import { useLanguage } from '../i18n/useLanguage'
 import { formatCurrency } from '../lib/format'
 
 export default function LotRow({ lot }) {
-  const [open, setOpen] = useState(false)
-  const hasDetail = Boolean(lot.source_snippet) || lot.source_page != null
+  const { locale, t, reasonText } = useLanguage()
 
   return (
     <li className={`lot-row${lot.differs_from_tender ? ' lot-row--differs' : ''}`}>
       <div className="lot-row__top">
         <span className="lot-row__label">
-          Lot {lot.lot_number}
+          {t('lotLabel', { n: lot.lot_number })}
           {lot.description ? ` — ${lot.description}` : ''}
         </span>
         <span className="lot-row__right">
-          {lot.value != null && <span className="lot-row__value">{formatCurrency(lot.value)}</span>}
+          {lot.value != null && <span className="lot-row__value">{formatCurrency(lot.value, locale)}</span>}
           <VerdictBadge verdict={lot.verdict} small />
         </span>
       </div>
 
-      {lot.differs_from_tender && (
-        <p className="lot-row__flag-note">⚠ Khác với kết quả của gói thầu chính — đừng bỏ lỡ</p>
-      )}
+      {lot.differs_from_tender && <p className="lot-row__flag-note">⚠ {t('lotDiffersWarning')}</p>}
 
-      <p className="lot-row__reason">{lot.reason}</p>
+      <p className="lot-row__reason">{reasonText(lot.reason_code, lot.context)}</p>
 
-      {hasDetail && (
-        <>
-          <button className="detail-toggle" onClick={() => setOpen((o) => !o)}>
-            {open ? 'Ẩn chi tiết nguồn' : 'Xem chi tiết nguồn'}
-          </button>
-          {open && <DetailPanel sourceSnippet={lot.source_snippet} sourcePage={lot.source_page} />}
-        </>
-      )}
+      <CitationRow sourcePage={lot.source_page} />
     </li>
   )
 }

@@ -40,7 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 ]
-INSTALLED_APPS += ['corsheaders', 'ninja', 'storages', 'core', 'api']       # added for CORS support, API endpoints, and S3 storage
+INSTALLED_APPS += ['corsheaders', 'ninja', 'storages', 'core', 'api', 'storage_client']       # added for CORS support, API endpoints, and S3 storage
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',                                # added for CORS support
@@ -110,12 +110,17 @@ else:
         }
     }
 
-# Cloudflare R2 (S3-compatible)
-AWS_ACCESS_KEY_ID = env('R2_ACCESS_KEY_ID', default='')
-AWS_SECRET_ACCESS_KEY = env('R2_SECRET_ACCESS_KEY', default='')
-AWS_STORAGE_BUCKET_NAME = env('R2_BUCKET_NAME', default='')
-AWS_S3_ENDPOINT_URL = env('R2_ENDPOINT_URL', default='')
+# Backblaze B2 (S3-compatible)
+AWS_ACCESS_KEY_ID = env('B2_KEY_ID', default='')
+AWS_SECRET_ACCESS_KEY = env('B2_APPLICATION_KEY', default='')
+AWS_STORAGE_BUCKET_NAME = env('B2_BUCKET_NAME', default='')
+AWS_S3_ENDPOINT_URL = env('B2_ENDPOINT_URL', default='')
+AWS_S3_REGION_NAME = env('B2_REGION_NAME', default='')
 AWS_S3_ADDRESSING_STYLE = 'virtual'
+# Bucket visibility (public vs private) isn't confirmed, and B2's ACL
+# support is stricter than AWS S3's - leave AWS_DEFAULT_ACL unset and
+# AWS_QUERYSTRING_AUTH at its default (True), so default_storage.url()
+# always returns a working signed URL regardless of bucket visibility.
 DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
 

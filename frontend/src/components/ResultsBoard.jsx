@@ -2,26 +2,12 @@ import { useMemo, useState } from 'react'
 import TenderCard from './TenderCard'
 import LiftedLotCard from './LiftedLotCard'
 import { buildSections } from '../lib/grouping'
+import { useLanguage } from '../i18n/useLanguage'
 
 const SECTIONS = [
-  {
-    key: 'CANDIDATE',
-    title: 'Candidates',
-    description: 'Đáp ứng đủ điều kiện — nên đấu thầu',
-    defaultOpen: true,
-  },
-  {
-    key: 'FLAG',
-    title: 'Flags',
-    description: 'Đạt điều kiện nhưng cần lưu ý',
-    defaultOpen: true,
-  },
-  {
-    key: 'HARD_FAIL',
-    title: 'Hard fails',
-    description: 'Không đạt điều kiện knockout',
-    defaultOpen: false,
-  },
+  { key: 'CANDIDATE', titleKey: 'sectionCandidatesTitle', descKey: 'sectionCandidatesDesc', defaultOpen: true },
+  { key: 'FLAG', titleKey: 'sectionFlagsTitle', descKey: 'sectionFlagsDesc', defaultOpen: true },
+  { key: 'HARD_FAIL', titleKey: 'sectionHardFailsTitle', descKey: 'sectionHardFailsDesc', defaultOpen: false },
 ]
 
 export default function ResultsBoard({ tenders }) {
@@ -37,6 +23,7 @@ export default function ResultsBoard({ tenders }) {
 }
 
 function Section({ cfg, items }) {
+  const { t } = useLanguage()
   const [open, setOpen] = useState(cfg.defaultOpen)
   const modifier = cfg.key.toLowerCase().replace('_', '-')
 
@@ -44,16 +31,16 @@ function Section({ cfg, items }) {
     <section className={`result-section result-section--${modifier}`}>
       <button className="result-section__header" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
         <span className="result-section__dot" />
-        <h2>{cfg.title}</h2>
+        <h2>{t(cfg.titleKey)}</h2>
         <span className="result-section__count">{items.length}</span>
-        <span className="result-section__desc">{cfg.description}</span>
+        <span className="result-section__desc">{t(cfg.descKey)}</span>
         <span className={`result-section__chevron${open ? ' is-open' : ''}`}>⌄</span>
       </button>
 
       {open && (
         <div className="result-section__body">
           {items.length === 0 ? (
-            <p className="result-section__empty">Không có mục nào trong mục này.</p>
+            <p className="result-section__empty">{t('sectionEmpty')}</p>
           ) : (
             items.map((item) =>
               item.kind === 'tender' ? (

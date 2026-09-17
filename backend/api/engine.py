@@ -3,25 +3,33 @@
 Pure Python, zero Django/ORM/LLM dependencies. `evaluate()` takes normalized
 views of a tender-or-lot and a company (`ScreenItem` / `ScreenCompany`) so the
 same rule logic runs unchanged whether the caller is screening a whole tender
-or a single lot within it — callers build these views from whatever ORM
+or a single lot within it - callers build these views from whatever ORM
 fields they have (e.g. Tender.contract_value vs Lot.value).
+
+`evaluate()` returns a stable `reason_code` (not a human sentence) plus
+`build_context()` returns the language-neutral facts behind it (numbers,
+lists). Rendering those into an actual sentence - in whatever language the
+viewer reads - is a presentation concern, done by the frontend's i18n layer.
+Domain vocabulary (reference/capability labels, city names) is left exactly
+as it appears in the source tender documents (German) and is never
+translated - only the surrounding explanation is.
 """
 
 from dataclasses import dataclass, field
 from decimal import Decimal
-from typing import Optional, Sequence, Tuple
+from typing import Any, Dict, Optional, Sequence, Tuple
 
 HARD_FAIL = "HARD_FAIL"
 FLAG = "FLAG"
 CANDIDATE = "CANDIDATE"
 
-REASON_OUT_OF_RADIUS = "Vượt bán kính hoạt động"
-REASON_OUT_OF_VALUE_RANGE = "Giá trị ngoài khoảng năng lực công ty"
-REASON_GUARANTEE_OVER_CEILING = "Yêu cầu bảo lãnh vượt hạn mức"
-REASON_MISSING_REFERENCES = "Thiếu kinh nghiệm tham chiếu yêu cầu"
-REASON_CAPABILITY_EXCLUDED = "Năng lực bị loại trừ"
-REASON_GUARANTEE_NEAR_CEILING = "Bảo lãnh sát trần"
-REASON_CANDIDATE = "Đáp ứng đầy đủ điều kiện sơ bộ"
+REASON_OUT_OF_RADIUS = "OUT_OF_RADIUS"
+REASON_OUT_OF_VALUE_RANGE = "OUT_OF_VALUE_RANGE"
+REASON_GUARANTEE_OVER_CEILING = "GUARANTEE_OVER_CEILING"
+REASON_MISSING_REFERENCES = "MISSING_REFERENCES"
+REASON_CAPABILITY_EXCLUDED = "CAPABILITY_EXCLUDED"
+REASON_GUARANTEE_NEAR_CEILING = "GUARANTEE_NEAR_CEILING"
+REASON_CANDIDATE_OK = "CANDIDATE_OK"
 
 _FLAG_RATIO_LOW = Decimal("0.9")
 _FLAG_RATIO_HIGH = Decimal("1")
@@ -77,50 +85,46 @@ def evaluate(tender_or_lot: ScreenItem, company: ScreenCompany) -> Tuple[str, st
         if _FLAG_RATIO_LOW <= ratio <= _FLAG_RATIO_HIGH:
             return FLAG, REASON_GUARANTEE_NEAR_CEILING
 
-    return CANDIDATE, REASON_CANDIDATE
+    return CANDIDATE, REASON_CANDIDATE_OK
 
 
-def build_snippet(
-    item: ScreenItem, company: ScreenCompany, verdict: str, reason: str
-) -> Tuple[str, Optional[int]]:
-    """Human-readable, citable explanation for a verdict. Kept separate from
-    `evaluate()` so the rule function's signature stays exactly (verdict, reason).
-    """
+def build_context(
+    item: ScreenItem, company: ScreenCompany, reason_code: str
+) -> Dict[str, Any]:
+    """Language-neutral facts behind a reason_code, for the frontend to
+    render into a localized, citable sentence."""
 
-    if reason == REASON_OUT_OF_RADIUS:
-        snippet = (
-            f"Khoảng cách {item.distance_km} km vượt bán kính hoạt động "
-            f"{company.region_radius_km} km của công ty."
-        )
-    elif reason == REASON_OUT_OF_VALUE_RANGE:
-        snippet = (
-            f"Giá trị {item.value} nằm ngoài khoảng năng lực "
-            f"{company.contract_min}–{company.contract_max}."
-        )
-    elif reason == REASON_GUARANTEE_OVER_CEILING:
-        snippet = (
-            f"Bảo lãnh yêu cầu {item.guarantee_required} vượt hạn mức "
-            f"{company.guarantee_ceiling} của công ty."
-        )
-    elif reason == REASON_MISSING_REFERENCES:
+    if reason_code == REASON_OUT_OF_RADIUS:
+        return {
+            "distance_km": item.distance_km,
+            "radius_km": company.region_radius_km,
+        }
+    if reason_code == REASON_OUT_OF_VALUE_RANGE:
+        return {
+            "value": item.value,
+            "min": company.contract_min,
+            "max": company.contract_max,
+        }
+    if reason_code == REASON_GUARANTEE_OVER_CEILING:
+        return {
+            "guarantee_required": item.guarantee_required,
+            "ceiling": company.guarantee_ceiling,
+        }
+    if reason_code == REASON_MISSING_REFERENCES:
         missing = [r for r in item.references_required if r not in company.references_held]
-        snippet = f"Thiếu tham chiếu bắt buộc: {', '.join(missing)}."
-    elif reason == REASON_CAPABILITY_EXCLUDED:
+        return {"missing": missing}
+    if reason_code == REASON_CAPABILITY_EXCLUDED:
         excluded = [r for r in item.references_required if r in company.capabilities_excluded]
-        snippet = f"Yêu cầu thuộc năng lực đã loại trừ: {', '.join(excluded)}."
-    elif reason == REASON_GUARANTEE_NEAR_CEILING:
-        ratio = (
+        return {"excluded": excluded}
+    if reason_code == REASON_GUARANTEE_NEAR_CEILING:
+        ratio_pct = (
             (item.guarantee_required / company.guarantee_ceiling * 100)
             if company.guarantee_ceiling
             else Decimal("0")
         )
-        snippet = (
-            f"Bảo lãnh yêu cầu {item.guarantee_required} đạt {ratio:.1f}% hạn mức "
-            f"{company.guarantee_ceiling}."
-        )
-    else:
-        snippet = (
-            "Đạt bán kính, giá trị hợp đồng, hạn mức bảo lãnh và tham chiếu yêu cầu."
-        )
-
-    return snippet, None
+        return {
+            "guarantee_required": item.guarantee_required,
+            "ceiling": company.guarantee_ceiling,
+            "ratio_pct": round(ratio_pct, 1),
+        }
+    return {}

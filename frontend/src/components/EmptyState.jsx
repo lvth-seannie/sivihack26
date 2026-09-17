@@ -1,9 +1,12 @@
+import { useLanguage } from '../i18n/useLanguage'
+
 export default function EmptyState({ onScreen, loading }) {
+  const { t } = useLanguage()
   return (
     <div className="empty-state">
-      <p>Chưa có kết quả sàng lọc cho công ty này.</p>
+      <p>{t('emptyStateText')}</p>
       <button className="btn-primary" onClick={onScreen} disabled={loading}>
-        {loading ? 'Đang sàng lọc…' : 'Screen tenders'}
+        {loading ? t('screeningButton') : t('screenButton')}
       </button>
     </div>
   )
