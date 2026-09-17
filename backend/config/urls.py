@@ -18,10 +18,11 @@ from django.urls import path
 
 from ninja import NinjaAPI
 from core.health import router as health_router
+from api.routers import router as api_router
 
 api = NinjaAPI()
 api.add_router("/", health_router)
-# api.add_router("/your-feature", your_feature_router)  # add per topic
+api.add_router("/", api_router)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
