@@ -155,3 +155,21 @@ class ScreeningServiceTests(DjangoTestCase):
         first = serialize_result(self.company)
         second = serialize_result(self.company)
         self.assertEqual(first["generated_at"], second["generated_at"])
+
+    def test_source_link_falls_back_to_external_url_when_nothing_cached(self):
+        self.tender.source_url = "https://oeffentlichevergabe.de/ui/de/notice/T-1"
+        self.tender.save(update_fields=["source_url"])
+        run_screening(self.company)
+        tender_out = serialize_result(self.company)["tenders"][0]
+        self.assertEqual(tender_out["source_url"], "https://oeffentlichevergabe.de/ui/de/notice/T-1")
+        self.assertFalse(tender_out["source_is_cached"])
+
+    def test_source_link_prefers_our_cached_copy_over_external_url(self):
+        self.tender.source_url = "https://oeffentlichevergabe.de/ui/de/notice/T-1"
+        self.tender.raw_document_key = "tenders/T-1.pdf"
+        self.tender.save(update_fields=["source_url", "raw_document_key"])
+        run_screening(self.company)
+        tender_out = serialize_result(self.company)["tenders"][0]
+        self.assertNotEqual(tender_out["source_url"], "https://oeffentlichevergabe.de/ui/de/notice/T-1")
+        self.assertIn("tenders/T-1.pdf", tender_out["source_url"])
+        self.assertTrue(tender_out["source_is_cached"])

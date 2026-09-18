@@ -7,9 +7,22 @@ from typing import Optional
 from django.db import transaction
 from django.db.models import QuerySet
 
+from storage_client.client import file_url
+
 from . import geo
 from .engine import ScreenCompany, ScreenItem, build_context, evaluate
 from .models import Company, Lot, Tender, Verdict
+
+
+def _resolve_source(tender: Tender) -> tuple[str, bool]:
+    """Prefer our own B2-cached copy of the notice PDF over the external
+    source_url - oeffentlichevergabe.de notices get archived/delisted over
+    time and 404, while a cached object is ours to keep serving. Falls back
+    to the external URL (with source_is_cached=False, so the frontend can
+    show a staleness caveat) when nothing was ever cached."""
+    if tender.raw_document_key:
+        return file_url(tender.raw_document_key), True
+    return tender.source_url, False
 
 
 def _to_screen_company(company: Company) -> ScreenCompany:
@@ -171,12 +184,14 @@ def serialize_result(company: Company) -> dict:
                 }
             )
 
+        source_url, source_is_cached = _resolve_source(tender)
         tenders_out.append(
             {
                 "id": tender.id,
                 "external_id": tender.external_id,
                 "title": tender.title,
-                "source_url": tender.source_url,
+                "source_url": source_url,
+                "source_is_cached": source_is_cached,
                 "location": tender.location,
                 "contract_value": tender.contract_value,
                 "guarantee_required": tender.guarantee_required,

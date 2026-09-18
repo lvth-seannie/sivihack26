@@ -21,7 +21,11 @@ export default function TenderCard({ tender }) {
         <VerdictBadge verdict={tender.verdict} />
       </div>
 
-      <CitationRow sourcePage={tender.source_page} sourceUrl={tender.source_url} />
+      <CitationRow
+        sourcePage={tender.source_page}
+        sourceUrl={tender.source_url}
+        sourceIsCached={tender.source_is_cached}
+      />
 
       {tender.lots.length > 0 && (
         <ul className="lot-list">

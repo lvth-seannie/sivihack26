@@ -45,6 +45,7 @@ class TenderResultOut(Schema):
     external_id: str
     title: str
     source_url: str
+    source_is_cached: bool
     location: str
     contract_value: Optional[Decimal] = None
     guarantee_required: Optional[Decimal] = None

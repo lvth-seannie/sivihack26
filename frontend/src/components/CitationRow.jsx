@@ -1,6 +1,6 @@
 import { useLanguage } from '../i18n/useLanguage'
 
-export default function CitationRow({ sourcePage, sourceUrl }) {
+export default function CitationRow({ sourcePage, sourceUrl, sourceIsCached }) {
   const { t } = useLanguage()
   if (sourcePage == null && !sourceUrl) return null
 
@@ -11,6 +11,9 @@ export default function CitationRow({ sourcePage, sourceUrl }) {
         <a href={sourceUrl} target="_blank" rel="noreferrer">
           {t('sourceLink')}
         </a>
+      )}
+      {sourceUrl && !sourceIsCached && (
+        <span className="citation-row__caveat">{t('sourceStaleCaveat')}</span>
       )}
     </div>
   )

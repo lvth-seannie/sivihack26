@@ -22,6 +22,11 @@ def file_exists(path: str) -> bool:
     return default_storage.exists(path)
 
 
+def file_url(path: str) -> str:
+    """Returns the URL for an already-stored file without re-uploading it."""
+    return default_storage.url(path)
+
+
 def download_file(path: str) -> bytes:
     """Reads a stored file back into memory (e.g. for extraction to read a
     previously-cached PDF)."""

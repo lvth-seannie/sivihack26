@@ -28,7 +28,11 @@ export default function LiftedLotCard({ tender, lot }) {
         <VerdictBadge verdict={lot.verdict} />
       </div>
 
-      <CitationRow sourcePage={lot.source_page} sourceUrl={tender.source_url} />
+      <CitationRow
+        sourcePage={lot.source_page}
+        sourceUrl={tender.source_url}
+        sourceIsCached={tender.source_is_cached}
+      />
     </article>
   )
 }

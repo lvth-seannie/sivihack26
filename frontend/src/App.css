@@ -870,6 +870,10 @@
   text-decoration: underline;
 }
 
+.citation-row__caveat {
+  font-style: italic;
+}
+
 /* ---------- Lot list ---------- */
 
 .lot-list {
