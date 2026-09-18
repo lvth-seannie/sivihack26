@@ -13,7 +13,11 @@ const SECTIONS = [
   { key: 'HARD_FAIL', titleKey: 'sectionHardFailsTitle', descKey: 'sectionHardFailsDesc', defaultOpen: false },
 ]
 
-const VERDICT_LABEL_KEYS = { CANDIDATE: 'verdictCandidate', FLAG: 'verdictFlag', HARD_FAIL: 'verdictHardFail' }
+const VERDICT_LABEL_KEYS = {
+  CANDIDATE: 'verdictToggle_CANDIDATE',
+  FLAG: 'verdictToggle_FLAG',
+  HARD_FAIL: 'verdictToggle_HARD_FAIL',
+}
 
 function itemReasonCode(item) {
   return item.kind === 'tender' ? item.tender.reason_code : item.lot.reason_code
