@@ -3,8 +3,13 @@ import CitationRow from './CitationRow'
 import { useLanguage } from '../i18n/useLanguage'
 import { formatCurrency } from '../lib/format'
 
-export default function LotRow({ lot }) {
+// Lower rank = better verdict. Used only to pick which direction the
+// mismatch callout should read - not a business ranking of the verdicts.
+const VERDICT_RANK = { CANDIDATE: 0, FLAG: 1, HARD_FAIL: 2 }
+
+export default function LotRow({ lot, tenderVerdict }) {
   const { locale, t, reasonText } = useLanguage()
+  const isOpportunity = VERDICT_RANK[lot.verdict] < VERDICT_RANK[tenderVerdict]
 
   return (
     <li className={`lot-row${lot.differs_from_tender ? ' lot-row--differs' : ''}`}>
@@ -19,7 +24,11 @@ export default function LotRow({ lot }) {
         </span>
       </div>
 
-      {lot.differs_from_tender && <p className="lot-row__flag-note">⚠ {t('lotDiffersWarning')}</p>}
+      {lot.differs_from_tender && (
+        <p className="lot-row__flag-note">
+          ⚠ {t(isOpportunity ? 'lotDiffersOpportunity' : 'lotDiffersCaution')}
+        </p>
+      )}
 
       <p className="lot-row__reason">{reasonText(lot.reason_code, lot.context)}</p>
 

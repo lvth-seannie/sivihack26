@@ -33,7 +33,10 @@ export default {
     hideSource: 'Hide source detail',
     sourceLink: 'Source ↗',
     pageLabel: 'Page {n}',
-    lotDiffersWarning: "Differs from the tender's own result — don't miss this",
+    lotDiffersOpportunity:
+      "Differs from the overall tender — this lot may be worth bidding on even though the full package isn't",
+    lotDiffersCaution:
+      "This specific lot doesn't qualify, even though the overall tender does — exclude it from any bid on this package",
     lotLabel: 'Lot {n}',
     lotOfTender: 'Lot {n} of tender',
     tenderParentVerdict: 'Tender result',

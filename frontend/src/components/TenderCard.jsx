@@ -26,7 +26,7 @@ export default function TenderCard({ tender }) {
       {tender.lots.length > 0 && (
         <ul className="lot-list">
           {tender.lots.map((lot) => (
-            <LotRow key={lot.id} lot={lot} />
+            <LotRow key={lot.id} lot={lot} tenderVerdict={tender.verdict} />
           ))}
         </ul>
       )}

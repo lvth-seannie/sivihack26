@@ -33,7 +33,10 @@ export default {
     hideSource: 'Quellenangabe ausblenden',
     sourceLink: 'Quelle ↗',
     pageLabel: 'Seite {n}',
-    lotDiffersWarning: 'Weicht vom Ergebnis der Hauptausschreibung ab — nicht übersehen',
+    lotDiffersOpportunity:
+      'Weicht vom Gesamtergebnis der Ausschreibung ab — dieses Los könnte sich lohnen, auch wenn das Gesamtpaket nicht infrage kommt',
+    lotDiffersCaution:
+      'Dieses Los erfüllt die Anforderungen nicht, obwohl die Ausschreibung insgesamt infrage kommt — aus einem Angebot für dieses Paket ausschließen',
     lotLabel: 'Los {n}',
     lotOfTender: 'Los {n} der Ausschreibung',
     tenderParentVerdict: 'Ergebnis der Ausschreibung',
