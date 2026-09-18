@@ -43,7 +43,7 @@ import requests
 from django.core.management.base import BaseCommand
 
 from api.models import Tender
-from api.pdf_cache import cache_notice_pdf
+from api.pdf_cache import cache_notice_pdf, fetch_notice_dates
 
 API_BASE = "https://oeffentlichevergabe.de"
 EXPORTS_URL = f"{API_BASE}/api/notice-exports"
@@ -185,6 +185,7 @@ class Command(BaseCommand):
         contract_value = Decimal(str(amount)) if amount is not None else None
 
         raw_document_key = cache_notice_pdf(session, notice_id)
+        published_at, submission_deadline = fetch_notice_dates(session, notice_id)
 
         Tender.objects.update_or_create(
             external_id=str(notice_id),
@@ -196,5 +197,7 @@ class Command(BaseCommand):
                 "construction_window": _construction_window(tender),
                 "cpv_code": cpv_code,
                 "raw_document_key": raw_document_key,
+                "published_at": published_at,
+                "submission_deadline": submission_deadline,
             },
         )

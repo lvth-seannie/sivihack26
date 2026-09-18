@@ -1,3 +1,4 @@
+from datetime import date
 from decimal import Decimal as D
 from unittest import TestCase
 
@@ -173,3 +174,19 @@ class ScreeningServiceTests(DjangoTestCase):
         self.assertNotEqual(tender_out["source_url"], "https://oeffentlichevergabe.de/ui/de/notice/T-1")
         self.assertIn("tenders/T-1.pdf", tender_out["source_url"])
         self.assertTrue(tender_out["source_is_cached"])
+
+    def test_published_and_deadline_dates_are_distinct_from_extracted_at(self):
+        self.tender.published_at = date(2026, 9, 1)
+        self.tender.submission_deadline = date(2026, 9, 20)
+        self.tender.save(update_fields=["published_at", "submission_deadline"])
+        run_screening(self.company)
+        tender_out = serialize_result(self.company)["tenders"][0]
+        self.assertEqual(tender_out["published_at"], date(2026, 9, 1))
+        self.assertEqual(tender_out["submission_deadline"], date(2026, 9, 20))
+        self.assertNotEqual(tender_out["published_at"], tender_out["extracted_at"])
+
+    def test_missing_dates_stay_null_not_fabricated(self):
+        run_screening(self.company)
+        tender_out = serialize_result(self.company)["tenders"][0]
+        self.assertIsNone(tender_out["published_at"])
+        self.assertIsNone(tender_out["submission_deadline"])

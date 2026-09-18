@@ -62,6 +62,14 @@ export default {
     verdictHardFail: 'Ausschluss',
     citationWithPage: '(siehe S. {page}: „{snippet}“)',
     citationNoPage: '(Quelle: „{snippet}“)',
+    publishedLabel: 'Veröffentlicht: {date}',
+    deadlineLabel: 'Frist: {date}',
+    sortLabel: 'Sortierung',
+    sortDefault: 'Standard',
+    sortDeadlineSoonest: 'Frist (früheste zuerst)',
+    filterPreset_all: 'Alle',
+    filterPreset_publishedThisWeek: 'Diese Woche veröffentlicht',
+    filterPreset_deadlineWithin7: 'Frist in 7 Tagen',
   },
   reasons: {
     OUT_OF_RADIUS: (ctx) =>

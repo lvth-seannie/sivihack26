@@ -52,6 +52,8 @@ class TenderResultOut(Schema):
     references_required: List[str]
     construction_window: str
     cpv_code: str
+    published_at: Optional[date] = None
+    submission_deadline: Optional[date] = None
     extracted_at: Optional[datetime] = None
     verdict: str
     reason_code: str

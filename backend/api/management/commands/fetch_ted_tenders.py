@@ -28,7 +28,7 @@ before treating a download as a real success, rather than assuming it.
 import time
 from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
-from typing import Optional
+from typing import Optional, Sequence
 
 import fitz  # PyMuPDF
 import requests
@@ -57,6 +57,8 @@ SEARCH_FIELDS = [
     "classification-cpv",
     "estimated-value-proc",
     "estimated-value-cur-proc",
+    "publication-date",
+    "deadline-receipt-tender-date-lot",
 ]
 
 
@@ -82,6 +84,25 @@ def _first_i18n_value(field: Optional[dict]) -> str:
 
 def _cpv_codes(notice: dict) -> list[str]:
     return [c for c in (notice.get("classification-cpv") or []) if isinstance(c, str)]
+
+
+def _to_date(value: Optional[str]) -> Optional[date]:
+    """TED dates carry a timezone offset suffix ("2026-09-18+02:00") - the
+    date itself is always the first 10 characters."""
+    if not value or len(value) < 10:
+        return None
+    try:
+        return date.fromisoformat(value[:10])
+    except ValueError:
+        return None
+
+
+def _earliest_date(values: Optional[Sequence[str]]) -> Optional[date]:
+    """deadline-receipt-tender-date-lot comes back as one value per lot -
+    the tender-level deadline shown to an estimator is the soonest one,
+    since that's the first date they need to act by."""
+    dates = [d for d in (_to_date(v) for v in (values or [])) if d is not None]
+    return min(dates) if dates else None
 
 
 class Command(BaseCommand):
@@ -221,5 +242,7 @@ class Command(BaseCommand):
                 "contract_value": contract_value,
                 "cpv_code": cpv_code,
                 "raw_document_key": raw_document_key,
+                "published_at": _to_date(notice.get("publication-date")),
+                "submission_deadline": _earliest_date(notice.get("deadline-receipt-tender-date-lot")),
             },
         )

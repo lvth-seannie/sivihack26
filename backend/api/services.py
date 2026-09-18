@@ -198,6 +198,8 @@ def serialize_result(company: Company) -> dict:
                 "references_required": tender.references_required,
                 "construction_window": tender.construction_window,
                 "cpv_code": tender.cpv_code,
+                "published_at": tender.published_at,
+                "submission_deadline": tender.submission_deadline,
                 "extracted_at": tender.extracted_at,
                 "verdict": tv.verdict,
                 "reason_code": tv.reason_code,

@@ -1,5 +1,6 @@
 import VerdictBadge from './VerdictBadge'
 import CitationRow from './CitationRow'
+import TenderDates from './TenderDates'
 import { useLanguage } from '../i18n/useLanguage'
 import { formatCurrency } from '../lib/format'
 
@@ -23,6 +24,7 @@ export default function LiftedLotCard({ tender, lot }) {
           <p className="tender-card__meta">
             {lot.description || '—'} · {formatCurrency(lot.value, locale)}
           </p>
+          <TenderDates publishedAt={tender.published_at} submissionDeadline={tender.submission_deadline} />
           <p className="tender-card__reason">{reasonText(lot.reason_code, lot.context)}</p>
         </div>
         <VerdictBadge verdict={lot.verdict} />

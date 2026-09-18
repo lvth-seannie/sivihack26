@@ -47,6 +47,12 @@ class Tender(models.Model):
     external_id = models.CharField(max_length=255, unique=True)
     title = models.CharField(max_length=500)
     source_url = models.URLField(max_length=1000, blank=True)
+    # When the notice was published, and when bids are due - two distinct
+    # business dates, neither the same as extracted_at (our own pipeline
+    # timestamp, never shown to users). Null when the source genuinely
+    # never carried the value, not defaulted/guessed.
+    published_at = models.DateField(null=True, blank=True)
+    submission_deadline = models.DateField(null=True, blank=True)
     location = models.CharField(max_length=255, blank=True)
     location_lat = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     location_lng = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)

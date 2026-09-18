@@ -1,6 +1,7 @@
 import VerdictBadge from './VerdictBadge'
 import CitationRow from './CitationRow'
 import LotRow from './LotRow'
+import TenderDates from './TenderDates'
 import { useLanguage } from '../i18n/useLanguage'
 import { formatCurrency } from '../lib/format'
 
@@ -16,6 +17,7 @@ export default function TenderCard({ tender }) {
           <p className="tender-card__meta">
             {tender.location || '—'} · {formatCurrency(tender.contract_value, locale)}
           </p>
+          <TenderDates publishedAt={tender.published_at} submissionDeadline={tender.submission_deadline} />
           <p className="tender-card__reason">{reasonText(tender.reason_code, tender.context)}</p>
         </div>
         <VerdictBadge verdict={tender.verdict} />

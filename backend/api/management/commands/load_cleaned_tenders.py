@@ -20,6 +20,7 @@ construction_window) are intentionally left blank here - that's the job
 of extract_tender_data, which reads the cached PDF, not this ETL.
 """
 
+from datetime import date
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Optional
@@ -46,6 +47,12 @@ def _to_decimal(value) -> Optional[Decimal]:
         return Decimal(str(value))
     except (InvalidOperation, ValueError):
         return None
+
+
+def _to_date(value) -> Optional[date]:
+    if value is None or pd.isna(value):
+        return None
+    return pd.Timestamp(value).date()
 
 
 class Command(BaseCommand):
@@ -119,6 +126,10 @@ class Command(BaseCommand):
                         "location": location[:255],
                         "contract_value": contract_value,
                         "cpv_code": row.mainClassificationCode,
+                        # No submission deadline: this raw dataset's tables
+                        # never carry it (confirmed by inspecting every
+                        # raw_data/*.csv header) - left null, not guessed.
+                        "published_at": _to_date(row.publicationDate),
                     },
                 )
                 self._load_lots(tender, lot_index, purpose, notice_id, notice_ver)

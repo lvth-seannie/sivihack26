@@ -60,6 +60,14 @@ export default {
     verdictHardFail: 'Loại trừ',
     citationWithPage: '(xem tr. {page}: "{snippet}")',
     citationNoPage: '(nguồn: "{snippet}")',
+    publishedLabel: 'Đăng: {date}',
+    deadlineLabel: 'Hạn nộp: {date}',
+    sortLabel: 'Sắp xếp',
+    sortDefault: 'Mặc định',
+    sortDeadlineSoonest: 'Hạn nộp (gần nhất trước)',
+    filterPreset_all: 'Tất cả',
+    filterPreset_publishedThisWeek: 'Đăng trong tuần này',
+    filterPreset_deadlineWithin7: 'Hạn nộp trong 7 ngày',
   },
   reasons: {
     OUT_OF_RADIUS: (ctx) =>
