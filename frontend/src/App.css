@@ -699,6 +699,68 @@
   border-color: var(--accent);
 }
 
+.reason-chart {
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--hardfail-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.reason-chart__title {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.reason-chart__bars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reason-chart__row {
+  display: grid;
+  grid-template-columns: 120px 1fr 32px;
+  align-items: center;
+  gap: 10px;
+}
+
+.reason-chart__label {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.reason-chart__track {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.reason-chart__fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--hardfail);
+  transition: width 0.3s ease;
+}
+
+.reason-chart__count {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  text-align: right;
+}
+
+@media (max-width: 560px) {
+  .reason-chart__row {
+    grid-template-columns: 90px 1fr 28px;
+  }
+}
+
 .result-section {
   background: var(--surface);
   border: 1px solid var(--border);

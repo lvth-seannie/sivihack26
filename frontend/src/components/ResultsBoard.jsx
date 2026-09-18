@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react'
 import TenderCard from './TenderCard'
 import LiftedLotCard from './LiftedLotCard'
+import ReasonDistributionChart from './ReasonDistributionChart'
 import { buildSections } from '../lib/grouping'
 import { FILTER_PRESETS, filterTenders, sortTenders } from '../lib/dateFilters'
+import { availableReasonCategories, categoryFor } from '../lib/reasonCategories'
 import { useLanguage } from '../i18n/useLanguage'
 
 const SECTIONS = [
@@ -11,19 +13,46 @@ const SECTIONS = [
   { key: 'HARD_FAIL', titleKey: 'sectionHardFailsTitle', descKey: 'sectionHardFailsDesc', defaultOpen: false },
 ]
 
+const VERDICT_LABEL_KEYS = { CANDIDATE: 'verdictCandidate', FLAG: 'verdictFlag', HARD_FAIL: 'verdictHardFail' }
+
+function itemReasonCode(item) {
+  return item.kind === 'tender' ? item.tender.reason_code : item.lot.reason_code
+}
+
 export default function ResultsBoard({ tenders }) {
   const { t } = useLanguage()
   const [sortBy, setSortBy] = useState('default')
   const [filterPreset, setFilterPreset] = useState('all')
+  const [reasonCategory, setReasonCategory] = useState('all')
+  const [sourceAvailableOnly, setSourceAvailableOnly] = useState(false)
+  const [verdictVisible, setVerdictVisible] = useState({ CANDIDATE: true, FLAG: true, HARD_FAIL: true })
+
+  const reasonOptions = useMemo(() => availableReasonCategories(tenders), [tenders])
 
   const visibleTenders = useMemo(
     () => sortTenders(filterTenders(tenders, filterPreset), sortBy),
     [tenders, filterPreset, sortBy],
   )
-  const sections = useMemo(() => buildSections(visibleTenders), [visibleTenders])
+
+  const sections = useMemo(() => {
+    const raw = buildSections(visibleTenders)
+    const filtered = {}
+    for (const key of Object.keys(raw)) {
+      filtered[key] = raw[key].filter((item) => {
+        if (reasonCategory !== 'all' && categoryFor(itemReasonCode(item)) !== reasonCategory) return false
+        if (sourceAvailableOnly && !item.tender.source_is_cached) return false
+        return true
+      })
+    }
+    return filtered
+  }, [visibleTenders, reasonCategory, sourceAvailableOnly])
+
+  const anyFilterActive = filterPreset !== 'all' || reasonCategory !== 'all' || sourceAvailableOnly
 
   return (
     <div className="results-board">
+      <ReasonDistributionChart tenders={tenders} sourceAvailableOnly={sourceAvailableOnly} />
+
       <div className="results-toolbar">
         <label className="results-toolbar__field">
           <span>{t('sortLabel')}</span>
@@ -47,14 +76,51 @@ export default function ResultsBoard({ tenders }) {
         </div>
       </div>
 
-      {SECTIONS.map((cfg) => (
-        <Section key={cfg.key} cfg={cfg} items={sections[cfg.key]} filterPreset={filterPreset} />
+      <div className="results-toolbar">
+        <div className="results-toolbar__presets" role="group" aria-label={t('verdictToggleLabel')}>
+          {SECTIONS.map((cfg) => (
+            <button
+              key={cfg.key}
+              type="button"
+              className={`filter-chip${verdictVisible[cfg.key] ? ' is-active' : ''}`}
+              onClick={() => setVerdictVisible((v) => ({ ...v, [cfg.key]: !v[cfg.key] }))}
+            >
+              {t(VERDICT_LABEL_KEYS[cfg.key])}
+            </button>
+          ))}
+        </div>
+
+        {reasonOptions.length > 0 && (
+          <label className="results-toolbar__field">
+            <span>{t('reasonTypeLabel')}</span>
+            <select value={reasonCategory} onChange={(e) => setReasonCategory(e.target.value)}>
+              <option value="all">{t('filterPreset_all')}</option>
+              {reasonOptions.map((key) => (
+                <option key={key} value={key}>
+                  {t(`reasonCategory_${key}`)}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+
+        <button
+          type="button"
+          className={`filter-chip${sourceAvailableOnly ? ' is-active' : ''}`}
+          onClick={() => setSourceAvailableOnly((v) => !v)}
+        >
+          {t('sourceAvailableLabel')}
+        </button>
+      </div>
+
+      {SECTIONS.filter((cfg) => verdictVisible[cfg.key]).map((cfg) => (
+        <Section key={cfg.key} cfg={cfg} items={sections[cfg.key]} anyFilterActive={anyFilterActive} />
       ))}
     </div>
   )
 }
 
-function Section({ cfg, items, filterPreset }) {
+function Section({ cfg, items, anyFilterActive }) {
   const { t } = useLanguage()
   const [open, setOpen] = useState(cfg.defaultOpen)
   const modifier = cfg.key.toLowerCase().replace('_', '-')
@@ -72,11 +138,7 @@ function Section({ cfg, items, filterPreset }) {
       {open && (
         <div className="result-section__body">
           {items.length === 0 ? (
-            <p className="result-section__empty">
-              {filterPreset !== 'all'
-                ? t('sectionEmptyFiltered', { filter: t(`filterPreset_${filterPreset}`) })
-                : t('sectionEmpty')}
-            </p>
+            <p className="result-section__empty">{anyFilterActive ? t('sectionEmptyFiltered') : t('sectionEmpty')}</p>
           ) : (
             items.map((item) =>
               item.kind === 'tender' ? (
