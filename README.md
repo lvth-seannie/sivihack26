@@ -5,6 +5,9 @@
 * Live App: **https://sivihack26.vercel.app**
 * Live API: https://sivihack26.onrender.com/api/docs
 
+### Live Demo Recording
+[Watch the demo video!](https://sivihack-media-26.s3.eu-central-003.backblazeb2.com/live-demo.mov)
+
 ---
 
 ## 1. What This Is
