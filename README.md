@@ -53,7 +53,6 @@ flowchart TB
         BE --> RULES["engine.py — deterministic rules, no AI"]
         BE --> PGB[(Neon Postgres)]
         BE -->|signed URL| B2B[(Backblaze B2)]
-        BOT[UptimeRobot] -. ping /api/health every 5 min .-> BE
     end
 
     PGA -. same database .- PGB
