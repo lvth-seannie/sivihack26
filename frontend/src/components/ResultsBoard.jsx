@@ -48,13 +48,13 @@ export default function ResultsBoard({ tenders }) {
       </div>
 
       {SECTIONS.map((cfg) => (
-        <Section key={cfg.key} cfg={cfg} items={sections[cfg.key]} />
+        <Section key={cfg.key} cfg={cfg} items={sections[cfg.key]} filterPreset={filterPreset} />
       ))}
     </div>
   )
 }
 
-function Section({ cfg, items }) {
+function Section({ cfg, items, filterPreset }) {
   const { t } = useLanguage()
   const [open, setOpen] = useState(cfg.defaultOpen)
   const modifier = cfg.key.toLowerCase().replace('_', '-')
@@ -72,7 +72,11 @@ function Section({ cfg, items }) {
       {open && (
         <div className="result-section__body">
           {items.length === 0 ? (
-            <p className="result-section__empty">{t('sectionEmpty')}</p>
+            <p className="result-section__empty">
+              {filterPreset !== 'all'
+                ? t('sectionEmptyFiltered', { filter: t(`filterPreset_${filterPreset}`) })
+                : t('sectionEmpty')}
+            </p>
           ) : (
             items.map((item) =>
               item.kind === 'tender' ? (

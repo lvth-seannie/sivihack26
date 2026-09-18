@@ -29,6 +29,7 @@ export default {
     sectionHardFailsTitle: 'Hard fails',
     sectionHardFailsDesc: 'Fails a knockout rule',
     sectionEmpty: 'Nothing in this section.',
+    sectionEmptyFiltered: 'No matches for "{filter}" in this section. Clear the filter or check the other sections below.',
     viewSource: 'View source detail',
     hideSource: 'Hide source detail',
     sourceLink: 'Source ↗',
