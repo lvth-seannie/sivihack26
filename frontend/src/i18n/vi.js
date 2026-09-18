@@ -29,7 +29,7 @@ export default {
     sectionHardFailsTitle: 'Loại trừ',
     sectionHardFailsDesc: 'Không đạt điều kiện knockout',
     sectionEmpty: 'Không có mục nào trong mục này.',
-    sectionEmptyFiltered: 'Không có kết quả cho "{filter}" trong mục này. Hãy bỏ bộ lọc hoặc xem các mục khác bên dưới.',
+    sectionEmptyFiltered: 'Không có kết quả cho "{filter}" trong mục này.',
     viewSource: 'Xem chi tiết nguồn',
     hideSource: 'Ẩn chi tiết nguồn',
     sourceLink: 'Nguồn ↗',

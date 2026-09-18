@@ -29,7 +29,7 @@ export default {
     sectionHardFailsTitle: 'Ausschlüsse',
     sectionHardFailsDesc: 'Scheitert an einem Ausschlusskriterium',
     sectionEmpty: 'Kein Eintrag in diesem Bereich.',
-    sectionEmptyFiltered: 'Kein Treffer für „{filter}“ in diesem Bereich. Filter zurücksetzen oder andere Bereiche prüfen.',
+    sectionEmptyFiltered: 'Kein Treffer für „{filter}“ in diesem Bereich.',
     viewSource: 'Quellenangabe anzeigen',
     hideSource: 'Quellenangabe ausblenden',
     sourceLink: 'Quelle ↗',
