@@ -32,7 +32,7 @@ export default {
     viewSource: 'Xem chi tiết nguồn',
     hideSource: 'Ẩn chi tiết nguồn',
     sourceLink: 'Nguồn ↗',
-    sourceStaleCaveat: 'có thể không còn truy cập được nếu tin đăng đã hết hạn',
+    sourceStaleCaveat: 'không còn khả dụng hoặc đã hết hạn',
     pageLabel: 'Trang {n}',
     lotDiffersOpportunity: 'Khác với kết quả chung của gói thầu — lot này có thể đáng để đấu thầu dù cả gói không đạt',
     lotDiffersCaution: 'Lot này không đạt điều kiện, dù gói thầu tổng thể đạt — cần loại khỏi hồ sơ dự thầu cho gói này',

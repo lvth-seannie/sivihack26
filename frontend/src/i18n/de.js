@@ -32,7 +32,7 @@ export default {
     viewSource: 'Quellenangabe anzeigen',
     hideSource: 'Quellenangabe ausblenden',
     sourceLink: 'Quelle ↗',
-    sourceStaleCaveat: 'eventuell nicht mehr verfügbar, falls die Ausschreibung inzwischen abgelaufen ist',
+    sourceStaleCaveat: 'nicht mehr verfügbar oder abgelaufen',
     pageLabel: 'Seite {n}',
     lotDiffersOpportunity:
       'Weicht vom Gesamtergebnis der Ausschreibung ab — dieses Los könnte sich lohnen, auch wenn das Gesamtpaket nicht infrage kommt',

@@ -32,7 +32,7 @@ export default {
     viewSource: 'View source detail',
     hideSource: 'Hide source detail',
     sourceLink: 'Source ↗',
-    sourceStaleCaveat: 'may no longer be available if the listing has expired',
+    sourceStaleCaveat: 'no longer available or expired',
     pageLabel: 'Page {n}',
     lotDiffersOpportunity:
       "Differs from the overall tender — this lot may be worth bidding on even though the full package isn't",
