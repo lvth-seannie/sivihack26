@@ -29,6 +29,8 @@ REASON_GUARANTEE_OVER_CEILING = "GUARANTEE_OVER_CEILING"
 REASON_MISSING_REFERENCES = "MISSING_REFERENCES"
 REASON_CAPABILITY_EXCLUDED = "CAPABILITY_EXCLUDED"
 REASON_GUARANTEE_NEAR_CEILING = "GUARANTEE_NEAR_CEILING"
+REASON_LOCATION_UNVERIFIED = "LOCATION_UNVERIFIED"
+REASON_PENDING_EXTRACTION = "PENDING_EXTRACTION"
 REASON_CANDIDATE_OK = "CANDIDATE_OK"
 
 _FLAG_RATIO_LOW = Decimal("0.9")
@@ -47,12 +49,23 @@ _CITATION_FIELD_BY_REASON = {
 
 @dataclass(frozen=True)
 class ScreenItem:
-    """Normalized view of a tender or a lot for rule evaluation."""
+    """Normalized view of a tender or a lot for rule evaluation.
+
+    data_verified should be False for a tender/lot whose rule-relevant
+    fields (value, guarantee_required, references_required) haven't been
+    extracted from the source document yet - those fields default to
+    None/[] either way, which reads identically to "genuinely no
+    requirement" further down in evaluate(). Without this flag, an
+    un-extracted tender would silently look "clean" and fall through to
+    CANDIDATE despite nothing actually having been checked. Defaults to
+    True so existing callers/tests that don't set it are unaffected.
+    """
 
     distance_km: Optional[Decimal] = None
     value: Optional[Decimal] = None
     guarantee_required: Optional[Decimal] = None
     references_required: Sequence[str] = field(default_factory=tuple)
+    data_verified: bool = True
 
 
 @dataclass(frozen=True)
@@ -74,6 +87,13 @@ class ScreenCompany:
 
 
 def evaluate(tender_or_lot: ScreenItem, company: ScreenCompany) -> Tuple[str, str]:
+    """Rule order matters: a knockout that's independently verifiable from
+    other data (value, guarantee, references) still fires even when
+    location can't be verified - only the final "must be within radius"
+    check silently passing on missing data would be the dangerous case
+    (see REASON_LOCATION_UNVERIFIED below), and it doesn't, because it's
+    never reached until every other hard-fail has had its say.
+    """
     item = tender_or_lot
 
     if item.distance_km is not None and item.distance_km > company.region_radius_km:
@@ -101,6 +121,23 @@ def evaluate(tender_or_lot: ScreenItem, company: ScreenCompany) -> Tuple[str, st
         ratio = item.guarantee_required / company.guarantee_ceiling
         if _FLAG_RATIO_LOW <= ratio <= _FLAG_RATIO_HIGH:
             return FLAG, REASON_GUARANTEE_NEAR_CEILING
+
+    # Nothing else disqualified it, but if we couldn't verify distance
+    # (missing coordinates on the company or the tender side - e.g. not
+    # backfilled yet, or the location string didn't geocode), that is NOT
+    # the same as "within radius". Flag for manual review rather than
+    # silently defaulting to CANDIDATE on an unverified hard constraint.
+    if item.distance_km is None:
+        return FLAG, REASON_LOCATION_UNVERIFIED
+
+    # Same principle, same reason: value/guarantee/references default to
+    # None/[] both when a document genuinely states no such requirement
+    # AND when it simply hasn't been read yet. Without extraction having
+    # run, rules 2-5 above can't tell those apart and silently pass either
+    # way - so an un-extracted tender must not exit here as a confident
+    # CANDIDATE either.
+    if not item.data_verified:
+        return FLAG, REASON_PENDING_EXTRACTION
 
     return CANDIDATE, REASON_CANDIDATE_OK
 
@@ -158,6 +195,8 @@ def build_context(
             "ceiling": company.guarantee_ceiling,
             "ratio_pct": round(ratio_pct, 1),
         }
+    elif reason_code == REASON_LOCATION_UNVERIFIED:
+        context = {"radius_km": company.region_radius_km}
     else:
         context = {}
 

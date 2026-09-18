@@ -72,6 +72,10 @@ export default {
       `Yêu cầu thuộc năng lực đã loại trừ: ${ctx.excluded.join(', ')}.`,
     GUARANTEE_NEAR_CEILING: (ctx) =>
       `Bảo lãnh yêu cầu ${formatCurrency(ctx.guarantee_required, L)} đạt ${ctx.ratio_pct}% hạn mức ${formatCurrency(ctx.ceiling, L)}.`,
+    LOCATION_UNVERIFIED: () =>
+      'Không thể xác minh vị trí — cần kiểm tra thủ công.',
+    PENDING_EXTRACTION: () =>
+      'Gói thầu này chưa được đọc và trích xuất — bảo lãnh, tham chiếu và giá trị hợp đồng chưa được xác minh. Cần kiểm tra thủ công.',
     CANDIDATE_OK: () =>
       'Đáp ứng bán kính hoạt động, giá trị hợp đồng, hạn mức bảo lãnh và tham chiếu yêu cầu.',
   },

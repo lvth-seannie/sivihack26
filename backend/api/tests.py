@@ -2,13 +2,16 @@ from decimal import Decimal as D
 from unittest import TestCase
 
 from django.test import TestCase as DjangoTestCase
+from django.utils import timezone
 
 from .engine import (
     CANDIDATE,
     FLAG,
     HARD_FAIL,
     REASON_CAPABILITY_EXCLUDED,
+    REASON_LOCATION_UNVERIFIED,
     REASON_OUT_OF_RADIUS,
+    REASON_PENDING_EXTRACTION,
     ScreenCompany,
     ScreenItem,
     evaluate,
@@ -68,6 +71,40 @@ class EvaluateTests(TestCase):
         verdict, _ = evaluate(item, BRENNER)
         self.assertEqual(verdict, CANDIDATE)
 
+    def test_unresolved_location_flags_instead_of_defaulting_to_candidate(self):
+        # distance_km=None means "couldn't be computed" (missing coordinates),
+        # not "within radius" - must never silently pass as CANDIDATE.
+        item = ScreenItem(
+            distance_km=None, value=D(1_000_000), guarantee_required=D(100_000), references_required=["Tiefbau"]
+        )
+        verdict, reason_code = evaluate(item, BRENNER)
+        self.assertEqual(verdict, FLAG)
+        self.assertEqual(reason_code, REASON_LOCATION_UNVERIFIED)
+
+    def test_unresolved_location_does_not_mask_a_real_hard_fail(self):
+        # An independently-verifiable knockout still fires even when
+        # location can't be checked - unverifiable isn't a free pass on
+        # everything else either.
+        item = ScreenItem(distance_km=None, value=D(50_000_000))
+        verdict, reason_code = evaluate(item, BRENNER)
+        self.assertEqual(verdict, HARD_FAIL)
+
+    def test_unextracted_tender_flags_instead_of_defaulting_to_candidate(self):
+        # value/guarantee_required/references_required all default to
+        # None/[] before extraction has run - identical to "genuinely no
+        # requirement". Without data_verified=False, this would silently
+        # read as CANDIDATE despite nothing having actually been checked.
+        item = ScreenItem(distance_km=D(10), data_verified=False)
+        verdict, reason_code = evaluate(item, BRENNER)
+        self.assertEqual(verdict, FLAG)
+        self.assertEqual(reason_code, REASON_PENDING_EXTRACTION)
+
+    def test_unextracted_tender_still_hard_fails_on_verifiable_data(self):
+        item = ScreenItem(distance_km=D(200), data_verified=False)
+        verdict, reason_code = evaluate(item, BRENNER)
+        self.assertEqual(verdict, HARD_FAIL)
+        self.assertEqual(reason_code, REASON_OUT_OF_RADIUS)
+
 
 class ScreeningServiceTests(DjangoTestCase):
     """Requires a real database connection - run via `manage.py test` once
@@ -77,6 +114,8 @@ class ScreeningServiceTests(DjangoTestCase):
         self.company = Company.objects.create(
             name="Brenner & Sohn Tiefbau GmbH",
             region_center="Augsburg",
+            region_lat=D("48.3705"),
+            region_lng=D("10.8978"),
             region_radius_km=150,
             contract_min=400_000,
             contract_max=4_000_000,
@@ -88,9 +127,12 @@ class ScreeningServiceTests(DjangoTestCase):
             external_id="T-1",
             title="Too big for the tender, fine for a lot",
             location="Augsburg",
+            location_lat=D("48.3705"),
+            location_lng=D("10.8978"),
             contract_value=5_000_000,
             guarantee_required=200_000,
             references_required=["Tiefbau"],
+            extracted_at=timezone.now(),
         )
         Lot.objects.create(
             tender=self.tender,

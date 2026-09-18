@@ -6,6 +6,12 @@ from django.db import models
 class Company(models.Model):
     name = models.CharField(max_length=255)
     region_center = models.CharField(max_length=255)
+    # Geocoded by backfill_coordinates - null until then. Distance to a
+    # tender is computed at evaluation time (see engine.py); a company or
+    # tender missing coordinates is a FLAG ("can't verify"), never a
+    # silent pass.
+    region_lat = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    region_lng = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     region_radius_km = models.DecimalField(max_digits=8, decimal_places=2)
     contract_min = models.DecimalField(max_digits=14, decimal_places=2)
     contract_max = models.DecimalField(max_digits=14, decimal_places=2)
@@ -42,6 +48,8 @@ class Tender(models.Model):
     title = models.CharField(max_length=500)
     source_url = models.URLField(max_length=1000, blank=True)
     location = models.CharField(max_length=255, blank=True)
+    location_lat = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    location_lng = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     contract_value = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
     guarantee_required = models.DecimalField(
         max_digits=14, decimal_places=2, null=True, blank=True

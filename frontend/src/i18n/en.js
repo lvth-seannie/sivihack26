@@ -72,6 +72,10 @@ export default {
       `Requires an excluded capability: ${ctx.excluded.join(', ')}.`,
     GUARANTEE_NEAR_CEILING: (ctx) =>
       `Required guarantee ${formatCurrency(ctx.guarantee_required, L)} is ${ctx.ratio_pct}% of the ${formatCurrency(ctx.ceiling, L)} ceiling.`,
+    LOCATION_UNVERIFIED: () =>
+      'Location could not be verified — manual check required.',
+    PENDING_EXTRACTION: () =>
+      "This tender hasn't been read yet — guarantee, references and value are unverified. Manual check required.",
     CANDIDATE_OK: () => 'Meets radius, contract value, guarantee and reference requirements.',
   },
 }

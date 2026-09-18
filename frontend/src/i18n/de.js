@@ -72,6 +72,10 @@ export default {
       `Erfordert eine ausgeschlossene Leistung: ${ctx.excluded.join(', ')}.`,
     GUARANTEE_NEAR_CEILING: (ctx) =>
       `Geforderte Bürgschaft ${formatCurrency(ctx.guarantee_required, L)} entspricht ${ctx.ratio_pct}% des Limits von ${formatCurrency(ctx.ceiling, L)}.`,
+    LOCATION_UNVERIFIED: () =>
+      'Standort konnte nicht überprüft werden — manuelle Prüfung erforderlich.',
+    PENDING_EXTRACTION: () =>
+      'Diese Ausschreibung wurde noch nicht ausgewertet — Bürgschaft, Referenzen und Auftragswert sind ungeprüft. Manuelle Prüfung erforderlich.',
     CANDIDATE_OK: () =>
       'Erfüllt Einsatzradius, Auftragswert, Bürgschaftslimit und geforderte Referenzen.',
   },

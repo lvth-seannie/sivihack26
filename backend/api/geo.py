@@ -1,16 +1,28 @@
-"""Small fixed lookup of German city coordinates + haversine distance.
+"""Geocoding + distance helpers.
 
-Companies are headquartered in different regions (Augsburg, Plauen,
-Hamburg), so "distance" has to be computed per company/tender pair rather
-than baked into the tender row. This is a bounded, deterministic lookup
-table for the cities used in this dataset - not a geocoding service.
+`haversine_km()` is pure math over coordinates already stored on the
+Company/Tender rows - this is what runs at evaluation time (see
+services.py), never a network call.
+
+`geocode()` is for the one-time `backfill_coordinates` management command
+only - never called from the request path. It checks a small fast-path
+dict for cities we already know precisely, then falls back to Nominatim
+(OpenStreetMap's free geocoder, no API key) for everything else, one
+request at a time, respecting Nominatim's usage policy (max 1 req/sec,
+a descriptive User-Agent). Results are meant to be cached to the DB
+immediately by the caller.
 """
 
+import time
 from math import asin, cos, radians, sin, sqrt
-from typing import Optional
+from typing import Optional, Tuple
+
+import requests
 
 EARTH_RADIUS_KM = 6371
 
+# Fast path: cities we've already verified precisely, so the backfill
+# command doesn't spend a Nominatim call (or its 1-req/sec budget) on them.
 CITY_COORDS = {
     "Augsburg": (48.3705, 10.8978),
     "Königsbrunn": (48.2739, 10.8956),
@@ -30,19 +42,45 @@ CITY_COORDS = {
     "Lübeck": (53.8655, 10.6866),
 }
 
+NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
+NOMINATIM_USER_AGENT = "SiviHack26-TenderScreening/1.0 (hackathon project; contact via GitHub repo)"
+NOMINATIM_DELAY_SECONDS = 1.1
 
-def distance_km(city_a: str, city_b: str) -> Optional[float]:
-    """Great-circle distance between two known cities, or None if either
-    city isn't in the lookup table (callers should treat that as "unknown",
-    not "zero" - rule 1 is skipped rather than wrongly passing/failing)."""
 
-    a = CITY_COORDS.get(city_a)
-    b = CITY_COORDS.get(city_b)
-    if a is None or b is None:
-        return None
-
-    lat1, lon1, lat2, lon2 = map(radians, [a[0], a[1], b[0], b[1]])
+def haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    lat1, lng1, lat2, lng2 = map(radians, [lat1, lng1, lat2, lng2])
     dlat = lat2 - lat1
-    dlon = lon2 - lon1
-    h = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
+    dlng = lng2 - lng1
+    h = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlng / 2) ** 2
     return round(2 * EARTH_RADIUS_KM * asin(sqrt(h)), 1)
+
+
+def geocode(place: str) -> Optional[Tuple[float, float]]:
+    """One-time lookup for backfill_coordinates - do not call at request
+    time. Returns (lat, lng), or None if the place couldn't be resolved."""
+
+    if not place:
+        return None
+    if place in CITY_COORDS:
+        return CITY_COORDS[place]
+
+    try:
+        resp = requests.get(
+            NOMINATIM_URL,
+            params={"q": place, "countrycodes": "de", "format": "json", "limit": 1},
+            headers={"User-Agent": NOMINATIM_USER_AGENT},
+            timeout=15,
+        )
+        resp.raise_for_status()
+        results = resp.json()
+    except (requests.RequestException, ValueError):
+        results = None
+    finally:
+        time.sleep(NOMINATIM_DELAY_SECONDS)
+
+    if not results:
+        return None
+    try:
+        return (float(results[0]["lat"]), float(results[0]["lon"]))
+    except (KeyError, IndexError, ValueError, TypeError):
+        return None

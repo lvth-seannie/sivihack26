@@ -24,8 +24,22 @@ def _to_screen_company(company: Company) -> ScreenCompany:
 
 
 def _distance_to(company: Company, tender: Tender) -> Optional[Decimal]:
-    km = geo.distance_km(company.region_center, tender.location)
-    return None if km is None else Decimal(str(km))
+    """None means "can't verify" (missing coordinates on either side) -
+    engine.evaluate() treats that as FLAG, never a silent CANDIDATE pass.
+    Coordinates are backfilled once via `backfill_coordinates`, never
+    geocoded here at request time."""
+
+    if company.region_lat is None or company.region_lng is None:
+        return None
+    if tender.location_lat is None or tender.location_lng is None:
+        return None
+    km = geo.haversine_km(
+        float(company.region_lat),
+        float(company.region_lng),
+        float(tender.location_lat),
+        float(tender.location_lng),
+    )
+    return Decimal(str(km))
 
 
 def _tender_item(tender: Tender, company: Company) -> ScreenItem:
@@ -34,15 +48,19 @@ def _tender_item(tender: Tender, company: Company) -> ScreenItem:
         value=tender.contract_value,
         guarantee_required=tender.guarantee_required,
         references_required=list(tender.references_required),
+        data_verified=tender.extracted_at is not None,
     )
 
 
 def _lot_item(lot: Lot, tender: Tender, company: Company) -> ScreenItem:
+    # Lots don't carry their own extracted_at - a lot's value/guarantee/
+    # references come from the same extraction pass as its parent tender.
     return ScreenItem(
         distance_km=_distance_to(company, tender),
         value=lot.value,
         guarantee_required=lot.guarantee_required,
         references_required=list(lot.references_required),
+        data_verified=tender.extracted_at is not None,
     )
 
 
