@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import logo from './assets/OmniNode_logo.png'
 import { fetchCompanies, fetchResults, screenCompany } from './api'
 import ResultsBoard from './components/ResultsBoard'
@@ -10,6 +10,7 @@ import LanguageSwitcher from './components/LanguageSwitcher'
 import { LanguageProvider } from './i18n/LanguageContext'
 import { useLanguage } from './i18n/useLanguage'
 import { formatDateTime } from './lib/format'
+import { countSections } from './lib/grouping'
 import './App.css'
 
 function AppContent() {
@@ -77,6 +78,9 @@ function AppContent() {
 
   const selectedCompany = companies.find((c) => c.id === selectedId)
   const busy = screening || fetchingResults
+  // Same buildSections() the section headers below use, so the pills can
+  // never drift out of sync with them - see lib/grouping.js.
+  const summary = useMemo(() => (result?.tenders ? countSections(result.tenders) : null), [result])
 
   return (
     <div className="app">
@@ -121,11 +125,11 @@ function AppContent() {
             </button>
           </div>
 
-          {result?.summary && (
+          {summary && (
             <div className={`summary-chips${flash ? ' is-flash' : ''}`}>
-              <span className="chip chip--candidate">{t('chipCandidates', { n: result.summary.CANDIDATE })}</span>
-              <span className="chip chip--flag">{t('chipFlags', { n: result.summary.FLAG })}</span>
-              <span className="chip chip--hardfail">{t('chipHardFails', { n: result.summary.HARD_FAIL })}</span>
+              <span className="chip chip--candidate">{t('chipCandidates', { n: summary.CANDIDATE })}</span>
+              <span className="chip chip--flag">{t('chipFlags', { n: summary.FLAG })}</span>
+              <span className="chip chip--hardfail">{t('chipHardFails', { n: summary.HARD_FAIL })}</span>
             </div>
           )}
 

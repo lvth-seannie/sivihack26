@@ -62,15 +62,8 @@ class TenderResultOut(Schema):
     lots: List[LotResultOut]
 
 
-class ScreenSummaryOut(Schema):
-    CANDIDATE: int
-    FLAG: int
-    HARD_FAIL: int
-
-
 class ScreenResultOut(Schema):
     company: CompanyOut
     screened: bool
     generated_at: Optional[datetime] = None
-    summary: ScreenSummaryOut
     tenders: List[TenderResultOut]

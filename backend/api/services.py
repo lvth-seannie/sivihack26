@@ -132,7 +132,14 @@ def _lot_sort_key(lot_number: str):
 
 def serialize_result(company: Company) -> dict:
     """Build the API payload from whatever Verdict rows are currently cached
-    for `company` - does not run any evaluation itself."""
+    for `company` - does not run any evaluation itself.
+
+    Deliberately doesn't return a "summary" count of its own - counting
+    tender verdicts only vs. tender+differing-lot verdicts (what the
+    frontend actually shows per section) previously drifted apart into two
+    different numbers for the same screening run. The frontend derives its
+    counts from the same tenders list it renders (lib/grouping.js), so
+    there's exactly one counting rule, not two that can disagree."""
 
     verdicts = (
         Verdict.objects.filter(company=company)
@@ -155,7 +162,6 @@ def serialize_result(company: Company) -> dict:
         if latest_evaluated is None or v.evaluated_at > latest_evaluated:
             latest_evaluated = v.evaluated_at
 
-    summary = {"CANDIDATE": 0, "FLAG": 0, "HARD_FAIL": 0}
     tenders_out = []
 
     for tid in order:
@@ -164,7 +170,6 @@ def serialize_result(company: Company) -> dict:
         tv: Optional[Verdict] = entry["tender_verdict"]
         if tv is None:
             continue
-        summary[tv.verdict] += 1
 
         lots_out = []
         for lv in sorted(entry["lots"], key=lambda x: _lot_sort_key(x.lot.lot_number)):
@@ -215,6 +220,5 @@ def serialize_result(company: Company) -> dict:
         "company": company,
         "screened": bool(order),
         "generated_at": latest_evaluated,
-        "summary": summary,
         "tenders": tenders_out,
     }

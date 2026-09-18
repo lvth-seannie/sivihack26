@@ -19,3 +19,19 @@ export function buildSections(tenders = []) {
 
   return sections
 }
+
+// The single source of truth for "how many CANDIDATE/FLAG/HARD_FAIL items
+// are there" - a tender counts once for its own verdict, plus one more for
+// each lot whose verdict differs (bidding on that lot is a distinct action
+// from bidding on the tender as a whole, so it's counted separately, same
+// as it's shown separately). Anything that shows a count anywhere in the
+// UI (summary pills, section headers) must derive it from this function so
+// the numbers can't drift apart the way they did before.
+export function countSections(tenders = []) {
+  const sections = buildSections(tenders)
+  return {
+    CANDIDATE: sections.CANDIDATE.length,
+    FLAG: sections.FLAG.length,
+    HARD_FAIL: sections.HARD_FAIL.length,
+  }
+}
