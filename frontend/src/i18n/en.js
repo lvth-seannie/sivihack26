@@ -5,8 +5,8 @@ const L = 'en'
 export default {
   ui: {
     appTitle: 'Tender AI Screening',
-    appSubtitle: 'Deterministic rule engine — no LLM in the loop',
-    heroSubtitle: 'Select a company profile, then screen it against every open tender.',
+    appSubtitle: 'AI reads the documents. Rules decide.',
+    heroSubtitle: 'Select a company, screen every open tender.',
     companyLabel: 'Company',
     screenButton: 'Screen tenders',
     screeningButton: 'Screening…',

@@ -5,8 +5,8 @@ const L = 'de'
 export default {
   ui: {
     appTitle: 'Ausschreibungs-Screening',
-    appSubtitle: 'Deterministische Regel-Engine — keine KI im Entscheidungspfad',
-    heroSubtitle: 'Unternehmen auswählen und gegen alle offenen Ausschreibungen prüfen.',
+    appSubtitle: 'KI liest die Dokumente. Regeln entscheiden.',
+    heroSubtitle: 'Unternehmen wählen, Ausschreibungen prüfen.',
     companyLabel: 'Unternehmen',
     screenButton: 'Ausschreibungen prüfen',
     screeningButton: 'Wird geprüft…',

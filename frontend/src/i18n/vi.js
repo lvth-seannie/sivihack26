@@ -5,8 +5,8 @@ const L = 'vi'
 export default {
   ui: {
     appTitle: 'Sàng lọc gói thầu AI',
-    appSubtitle: 'Công cụ luật tất định — không dùng LLM để ra quyết định',
-    heroSubtitle: 'Chọn hồ sơ công ty, sau đó sàng lọc trên toàn bộ gói thầu đang mở.',
+    appSubtitle: 'AI đọc tài liệu. Quy tắc quyết định.',
+    heroSubtitle: 'Chọn công ty và sàng lọc các gói thầu đang mở.',
     companyLabel: 'Công ty',
     screenButton: 'Sàng lọc gói thầu',
     screeningButton: 'Đang sàng lọc…',
